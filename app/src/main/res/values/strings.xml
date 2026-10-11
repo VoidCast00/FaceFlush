@@ -57,9 +57,9 @@
 
     <!-- Techniques -->
     <string name="technique_pixelate">Pixelate</string>
-    <string name="technique_pixelate_desc">Turns faces into big colour blocks. Very reliable against recognition, especially on Strong.</string>
+    <string name="technique_pixelate_desc">Turns faces into big colour blocks. Strong (few big blocks) is very reliable. Light can still be recognised by strong AI, especially after the photo is resized.</string>
     <string name="technique_blur">Blur</string>
-    <string name="technique_blur_desc">Smears facial detail. Use Medium or Strong; light blur can still be recognised.</string>
+    <string name="technique_blur_desc">Smears facial detail. Fools weaker AI, but in our tests a strong recognition model still matched about 3 in 4 heavily blurred faces. For real protection use Pixelate on Strong or Solid mask.</string>
     <string name="technique_mask">Solid mask</string>
     <string name="technique_mask_desc">Covers faces completely. The most reliable option.</string>
     <string name="technique_dead_pixels">Dead pixels &amp; noise</string>

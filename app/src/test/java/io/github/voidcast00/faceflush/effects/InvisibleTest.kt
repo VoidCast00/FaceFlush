@@ -47,6 +47,22 @@ class InvisibleTest {
         assertEquals((values[0] + values[1]) / 2, field.sample(0, 0.5, 0.0), 1e-6f)
     }
 
+    @Test
+    fun bundledFieldsParse() {
+        // Unit tests run from the app module directory
+        val expected = mapOf("cloak_pattern.bin" to 3, "morph_field.bin" to 2)
+        for ((name, channels) in expected) {
+            val file = java.io.File("src/main/assets/$name")
+            if (!file.exists()) continue
+            val field = file.inputStream().use { CanonicalField.read(it) }
+            assertEquals(name, channels, field.channels)
+            assertEquals(name, CanonicalFace.SIZE, field.size)
+            for (c in 0 until channels) for (y in 0 until field.size) for (x in 0 until field.size) {
+                assertTrue(name, field.sample(c, x.toDouble(), y.toDouble()).isFinite())
+            }
+        }
+    }
+
     private fun image(): PixelBuffer {
         val w = 600
         val h = 600

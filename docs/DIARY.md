@@ -151,3 +151,36 @@ robustness training worked.
 78% of faces at the most visible strength, even though it was one of the models the pattern was
 trained against. It's a light extra layer, not protection on its own. Per-photo optimisation
 (Max privacy) is where real invisible protection has to come from. Next: simulate it.
+
+## 2026-10-11: Max privacy simulation
+
+Simulated the phone's per-photo optimisation on the PC: start from the quick cloak, then 150
+signed-gradient steps, each averaged over 8 random transforms, at ε8 (PSNR about 39.5 dB, hard to
+see). ArcFace is **never** attacked: the phone can't ship it, so it stands in for "a strong model
+we don't have". 150 test photos; match rate, lower = better:
+
+| models attacked on the phone | ArcFace (never seen) | SFace | FaceNet | time per photo (RX 6600) |
+|---|---|---|---|---|
+| nothing (clean photo) | 99% | 98% | 96% | — |
+| SFace only | 85% (90% social) | **1%** (1% social) | 42% (51% social) | 6.8 s |
+| SFace + FaceNet | 85% (89% social) | **3%** (13% social) | **1%** (1% social) | 10.6 s |
+
+**What this means:**
+- Against the models it optimises against, per-photo cloaking works almost perfectly and survives
+  recompression.
+- It barely carries over to a strong model it has never seen (ArcFace 99% → 85%). This is the
+  core weakness of every invisible cloak, and it is exactly how Fawkes was beaten.
+- Adding FaceNet beats FaceNet too, but does **nothing** extra against ArcFace. So FaceNet (89 MB,
+  about 50% slower) is not worth shipping: the phone engine will be SFace only.
+- Still better than the quick cloak, which at ε8 left ArcFace at 99%.
+
+Next: try a higher visibility (ε16) to see whether transfer improves, and look at
+transfer-boosting tricks (momentum, input diversity) before building the phone side.
+
+## 2026-10-11: App fixes
+
+- Blur and Pixelate descriptions rewritten to match the lab: blur fools weaker AI, but a strong
+  model still matched about 3 in 4 heavily blurred faces.
+- The quick-cloak pattern now ships in the app (`assets/cloak_pattern.bin`, 147 KB).
+- Fullscreen preview: on HyperOS the dialog's bottom edge sat under the navigation bar, so the
+  compare and boxes buttons couldn't be reached. They moved into a top bar next to the close button.

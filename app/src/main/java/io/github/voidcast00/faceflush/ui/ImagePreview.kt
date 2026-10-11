@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.outlined.CropFree
 import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -310,25 +308,28 @@ fun FullscreenPreview(
                         },
                 )
             }
-            IconButton(
-                onClick = onDismiss,
-                colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f)),
-                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),
-            ) {
-                Icon(Icons.Outlined.Close, stringResource(R.string.close), tint = Color.White)
-            }
-            PreviewToolbar(
-                showBoxes = showBoxes,
-                onShowBoxesChange = onShowBoxesChange,
-                onComparePressed = { showOriginal = it },
-                onDark = true,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
+            // Controls sit at the top: on some phones (HyperOS) a dialog's bottom edge ends up
+            // under the navigation bar, where the buttons can't be reached
+            Row(
+                Modifier
+                    .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .background(Color.Black.copy(alpha = 0.6f))
-                    .navigationBarsPadding()
+                    .statusBarsPadding()
                     .padding(vertical = 8.dp),
-            )
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PreviewToolbar(
+                    showBoxes = showBoxes,
+                    onShowBoxesChange = onShowBoxesChange,
+                    onComparePressed = { showOriginal = it },
+                    onDark = true,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onDismiss, modifier = Modifier.padding(end = 8.dp)) {
+                    Icon(Icons.Outlined.Close, stringResource(R.string.close), tint = Color.White)
+                }
+            }
         }
     }
 }
