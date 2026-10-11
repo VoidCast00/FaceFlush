@@ -129,3 +129,25 @@ Medium and Strong of every technique hid the face from the detector.
   - FaceNet alone is 89 MB. Next: test whether attacking SFace alone carries over to ArcFace
     well enough to drop FaceNet.
 - The phone-side optimisation loop (`MaxCloak.kt`) is written and unit-tested with a fake model.
+
+## 2026-10-11: Quick cloak results
+
+Trained for 4,000 steps (about 32 min on the RX 6600). The similarity to the clean face plateaued
+around 0.65 after 1,000 steps. Bench, match rate (lower = better), "social" = after a 75% downscale
++ JPEG 80:
+
+| cloak strength | PSNR | ArcFace (trained against) | SFace (held out) | FaceNet (trained against) |
+|---|---|---|---|---|
+| none | — | 99% | 98% | 96% |
+| ε4 | 44.9 dB | 99% | 98% | 94% |
+| ε8 | 38.9 dB | 99% | 95% | 77% |
+| ε12 | 35.4 dB | 94% | 80% | 43% |
+| ε16 | 32.9 dB | 78% | 58% | 18% |
+
+Recompression barely changes the numbers (e.g. ε16 ArcFace 78.8% → 78.0% after "social"), so the
+robustness training worked.
+
+**Verdict:** a single universal pattern is too weak against a strong model. ArcFace still matches
+78% of faces at the most visible strength, even though it was one of the models the pattern was
+trained against. It's a light extra layer, not protection on its own. Per-photo optimisation
+(Max privacy) is where real invisible protection has to come from. Next: simulate it.
