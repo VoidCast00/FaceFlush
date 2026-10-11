@@ -230,3 +230,22 @@ passed to `cv2.remap`; fixed.)
   about 170 MB in release. A custom Flex build with only the 72 ops used should shrink the runtime
   a lot.
 - The model file isn't in git (75 MB); build it with `lab/export_max.py`.
+
+## 2026-10-11: Face morph, second attempt: works on paper, not worth it
+
+Retrained with every pixel capped at 3 canonical px (about 8% of the eye distance). Similarity to
+the clean face plateaued at 0.64, about the same as the quick cloak. Bench (match rate, lower =
+better):
+
+| morph amount | PSNR | ArcFace (trained against) | SFace (held out) | FaceNet (trained against) |
+|---|---|---|---|---|
+| ×0.5 | 34.6 dB | 99% | 97% | 92% |
+| ×1 | 29.7 dB | 97% | 95% | 70% |
+| ×1.5 | 27.3 dB | 88% | 85% | 40% |
+
+![Second morph at ×0.5, ×1 and ×1.5](img/morph_v2.jpg)
+
+**Verdict:** the morph is the worst trade we've measured. It visibly changes the face (fuller mouth,
+shifted eyes) while ArcFace still recognises 97% at ×1. Strong recognition models are trained to be
+robust to exactly this kind of variation (expressions, angles, lens distortion). Max privacy at ε16
+does far more for a comparable visual cost.
