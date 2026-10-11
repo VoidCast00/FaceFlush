@@ -253,3 +253,9 @@ does far more for a comparable visual cost.
 **Decision:** the morph stays in the app but is clearly marked as practically useless: off by
 default, its slider is labelled "barely works", and the explainer quotes the numbers above. The
 Strong preset of the cloak now uses ε16, the strength measured in the lab.
+
+## 2026-10-11: No video
+
+Video support is dropped from the plan. Processing every frame (and keeping faces tracked between
+frames) would be a project of its own; the effort goes into making photo protection better instead.
+The disabled "Choose a video (coming soon)" button is gone from the home screen.

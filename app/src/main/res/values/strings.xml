@@ -9,7 +9,6 @@
     <string name="badge_no_metadata">No metadata</string>
     <string name="badge_on_device">On-device</string>
     <string name="pick_photo">Choose a photo</string>
-    <string name="pick_video_soon">Choose a video (coming soon)</string>
     <string name="home_privacy">Everything happens on your phone. FaceFlush has no internet access, and the photos it saves contain no location or camera data.</string>
 
     <!-- Editor -->

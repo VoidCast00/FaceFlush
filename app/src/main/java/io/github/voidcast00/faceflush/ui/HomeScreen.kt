@@ -18,12 +18,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -88,12 +86,6 @@ fun HomeScreen(onPickPhoto: () -> Unit, events: Flow<EditorEvent>) {
                         Icon(Icons.Outlined.Image, null, Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Text(stringResource(R.string.pick_photo), style = MaterialTheme.typography.titleMedium)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                        Icon(Icons.Outlined.Movie, null, Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Text(stringResource(R.string.pick_video_soon))
                     }
                     Spacer(Modifier.height(28.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {

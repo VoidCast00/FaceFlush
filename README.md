@@ -47,7 +47,8 @@ techniques on a PC with a GPU.
 
 1. Photos with visible techniques (done)
 2. Invisible cloak: quick pattern, face morph, on-device "Max privacy" (in progress)
-3. Video
+
+Video is not planned: running all of this on every frame is a project of its own.
 
 ## Credits
 
