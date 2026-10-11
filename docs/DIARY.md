@@ -28,11 +28,6 @@ all on the phone and without internet access.
 could still find the face. Light blur, light dead pixels and light feature bars still got found;
 Medium and Strong of every technique hid the face from the detector.
 
-**Hiccups:**
-- The Xiaomi phone (HyperOS) blocks app installs over USB, so installs go through root
-  (`su -c pm install`).
-- A hidden "overwrite?" prompt from an interactive `cp` alias hung a build step for 7 minutes.
-
 ## 2026-10-11: UI redesign
 
 - The preview was too big. It's now a card taking about 40% of the screen, with a fullscreen view
@@ -70,9 +65,9 @@ Medium and Strong of every technique hid the face from the detector.
 - Research-only models are used only on the PC, never shipped in the app.
 
 **Lab setup:**
-- Hardware: a separate PC (Ryzen 5 5500, RX 6600, CachyOS) reached over SSH through Tailscale.
+- Hardware: a desktop PC with an AMD RX 6600 GPU. The phone and the laptop used for app
+  development are too slow for training.
 - Software: PyTorch 2.9.1 on ROCm 6.4. The RX 6600 (gfx1032) needs `HSA_OVERRIDE_GFX_VERSION=10.3.0`.
-- Everything the lab touches lives in one folder on that PC.
 - **Data:** LFW (13,233 photos, 5,749 people). 600 people are held out for testing.
 - **Models:**
   - ArcFace R50 (InsightFace): strongest, research-only, used on the PC only
@@ -182,7 +177,7 @@ transfer-boosting tricks (momentum, input diversity) before building the phone s
 - Blur and Pixelate descriptions rewritten to match the lab: blur fools weaker AI, but a strong
   model still matched about 3 in 4 heavily blurred faces.
 - The quick-cloak pattern now ships in the app (`assets/cloak_pattern.bin`, 147 KB).
-- Fullscreen preview: on HyperOS the dialog's bottom edge sat under the navigation bar, so the
+- Fullscreen preview: on some phones the dialog's bottom edge sat under the navigation bar, so the
   compare and boxes buttons couldn't be reached. They moved into a top bar next to the close button.
 
 ## 2026-10-11: Max privacy at higher visibility, and a broken morph
@@ -217,7 +212,7 @@ passed to `cv2.remap`; fixed.)
 
 - The engine is now SFace only: `max_cloak.tflite`, 75 MB (was 129 MB with FaceNet). Its gradient
   matches TensorFlow's (cosine 0.999999).
-- Runs on the Redmi Note 13 Pro+ through TFLite 2.16.1 with the Flex delegate (72 of 445 ops need
+- Runs on a mid-range Android phone through TFLite 2.16.1 with the Flex delegate (72 of 445 ops need
   TensorFlow kernels). One model call takes about 0.25 s, so a face (150 steps × 8 transforms,
   same as the PC simulation) takes about 5 minutes.
 - Runs as a WorkManager foreground job with a progress notification and a Cancel button; the
