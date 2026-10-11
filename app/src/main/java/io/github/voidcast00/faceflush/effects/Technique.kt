@@ -163,13 +163,16 @@ enum class Technique(
         listOf(
             // Cloak strength in 1/255 steps; 0 turns the cloak off
             ParamSpec(Params.VISIBILITY, R.string.param_visibility, 0f, 16f),
+            // Kept for those who want it, but off by default: the lab found it barely works
+            // (strong AI still matched 97% at 1.0) while visibly changing the face
             ParamSpec(Params.MORPH, R.string.param_morph, 0f, 1.5f, 0.1f),
         ),
-        defaults = emptyMap(),
+        defaults = mapOf(Params.MORPH to 0f),
+        // 8 and 16 are the strengths measured in the lab (see docs/DIARY.md)
         presets = mapOf(
-            Strength.LIGHT to mapOf(Params.VISIBILITY to 4f, Params.MORPH to 0.5f),
-            Strength.MEDIUM to mapOf(Params.VISIBILITY to 8f, Params.MORPH to 1.0f),
-            Strength.STRONG to mapOf(Params.VISIBILITY to 12f, Params.MORPH to 1.5f),
+            Strength.LIGHT to mapOf(Params.VISIBILITY to 4f),
+            Strength.MEDIUM to mapOf(Params.VISIBILITY to 8f),
+            Strength.STRONG to mapOf(Params.VISIBILITY to 16f),
         ),
     );
 

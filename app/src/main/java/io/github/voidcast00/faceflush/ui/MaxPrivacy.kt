@@ -181,6 +181,7 @@ fun InvisibleInfoSheet(
             )
             InfoSection(R.string.info_what_title, stringResource(R.string.info_what))
             InfoSection(R.string.info_tests_title, stringResource(R.string.info_tests))
+            InfoSection(R.string.info_morph_title, stringResource(R.string.info_morph))
             InfoSection(R.string.info_race_title, stringResource(R.string.info_race))
             InfoSection(R.string.info_cost_title, stringResource(R.string.info_cost, minutesPerFace))
             InfoSection(R.string.info_advice_title, stringResource(R.string.info_advice))

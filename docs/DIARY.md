@@ -249,3 +249,7 @@ better):
 shifted eyes) while ArcFace still recognises 97% at ×1. Strong recognition models are trained to be
 robust to exactly this kind of variation (expressions, angles, lens distortion). Max privacy at ε16
 does far more for a comparable visual cost.
+
+**Decision:** the morph stays in the app but is clearly marked as practically useless: off by
+default, its slider is labelled "barely works", and the explainer quotes the numbers above. The
+Strong preset of the cloak now uses ε16, the strength measured in the lab.

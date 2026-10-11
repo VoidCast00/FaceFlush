@@ -68,7 +68,7 @@
     <string name="technique_landmarks_desc">Bars across the eyes, nose and mouth, the parts face detectors rely on most. Leaves the rest of the face visible.</string>
 
     <string name="technique_invisible">Invisible cloak</string>
-    <string name="technique_invisible_desc">A faint trained pattern and a tiny change in face shape that confuse recognition AI while the photo looks almost the same. Not a guarantee: newer AI can learn to see through it.</string>
+    <string name="technique_invisible_desc">A faint trained pattern that confuses recognition AI while the photo looks almost the same. Weak on its own; Max privacy below is much stronger. Not a guarantee: newer AI can learn to see through it.</string>
 
     <!-- Parameters -->
     <string name="param_coverage">Area size</string>
@@ -86,7 +86,7 @@
     <string name="param_opacity">Opacity</string>
     <string name="param_style">Bar pattern</string>
     <string name="param_visibility">Cloak strength (higher is more visible)</string>
-    <string name="param_morph">Face shape change</string>
+    <string name="param_morph">Face shape change (barely works, see below)</string>
 
     <!-- Options -->
     <string name="option_oval">Oval</string>
@@ -130,6 +130,8 @@
     <string name="info_what">Recognition AI turns a face into a list of numbers and compares those lists. FaceFlush adds a faint, trained pattern (and optionally a tiny change in face shape) that pushes your numbers away from you, while people barely see a difference.</string>
     <string name="info_tests_title">What our tests showed</string>
     <string name="info_tests">Measured on 150 test faces, also after Instagram-style recompression:\n• Quick cloak alone: a strong AI still recognised 99 in 100.\n• Max privacy, strength 8 (faint shimmer): the AI it is tuned on recognised only 1 in 100, but a strong AI it never saw still recognised about 85 in 100.\n• Max privacy, strength 16 (visible colour shimmer): the strong AI it never saw recognised about 31 to 39 in 100.</string>
+    <string name="info_morph_title">Face shape change: practically useless</string>
+    <string name="info_morph">The face shape slider in More settings is off by default. In our tests it visibly changed faces while a strong AI still recognised 97 in 100 (88 in 100 at the maximum). It is kept only for people who want to experiment.</string>
     <string name="info_race_title">It is an arms race</string>
     <string name="info_race">A similar tool (Fawkes, 2020) stopped working once newer AI came out. Assume any invisible protection will be beaten eventually, and that big companies use AI we cannot test against.</string>
     <string name="info_cost_title">The cost</string>
