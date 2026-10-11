@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FaceFlush</string>
+
+    <!-- Home -->
+    <string name="home_headline">Your face\nis data.</string>
+    <string name="home_tagline">Every photo you share can be scanned, matched and stored. FaceFlush scrambles faces before they leave your phone.</string>
+    <string name="badge_offline">Offline</string>
+    <string name="badge_no_metadata">No metadata</string>
+    <string name="badge_on_device">On-device</string>
+    <string name="pick_photo">Choose a photo</string>
+    <string name="pick_video_soon">Choose a video (coming soon)</string>
+    <string name="home_privacy">Everything happens on your phone. FaceFlush has no internet access, and the photos it saves contain no location or camera data.</string>
+
+    <!-- Editor -->
+    <string name="back">Back</string>
+    <string name="settings">Settings</string>
+    <string name="technique">Technique</string>
+    <string name="apply_to">Apply to</string>
+    <string name="strength">Strength</string>
+    <string name="more_settings">More settings</string>
+    <string name="save">Save</string>
+    <string name="share">Share</string>
+    <string name="share_title">Share photo</string>
+    <string name="preview_description">Photo preview</string>
+    <string name="tool_compare">Hold: original</string>
+    <string name="tool_boxes">Boxes</string>
+    <string name="tool_expand">Fullscreen</string>
+    <string name="close">Close</string>
+    <string name="hint_detecting">Looking for faces…</string>
+    <plurals name="hint_faces">
+        <item quantity="one">%d face found. Tap it to skip it, or drag on the photo to cover another area.</item>
+        <item quantity="other">%d faces found. Tap a face to skip it, or drag on the photo to cover another area.</item>
+    </plurals>
+    <string name="hint_manual">Drag on the photo to mark areas. Tap an area to remove it.</string>
+    <string name="hint_whole">The effect covers the entire photo.</string>
+
+    <!-- Detector -->
+    <string name="detector_title">Face detector</string>
+    <string name="detector_yunet">Accurate (YuNet)</string>
+    <string name="detector_platform">Lightweight (built-in)</string>
+    <string name="detector_fallback">The accurate detector couldn\'t start on this device, so the built-in one was used.</string>
+
+    <!-- Messages -->
+    <string name="saved">Saved to Pictures/FaceFlush</string>
+    <string name="no_faces">No faces found. Drag on the photo to mark areas by hand.</string>
+    <string name="error_open">Couldn\'t open that image.</string>
+    <string name="error_export">Couldn\'t create the image. Try a smaller photo.</string>
+
+    <!-- Regions and strength -->
+    <string name="region_faces">Faces</string>
+    <string name="region_whole">Whole image</string>
+    <string name="region_manual">Manual</string>
+    <string name="strength_light">Light</string>
+    <string name="strength_medium">Medium</string>
+    <string name="strength_strong">Strong</string>
+
+    <!-- Techniques -->
+    <string name="technique_pixelate">Pixelate</string>
+    <string name="technique_pixelate_desc">Turns faces into big colour blocks. Very reliable against recognition, especially on Strong.</string>
+    <string name="technique_blur">Blur</string>
+    <string name="technique_blur_desc">Smears facial detail. Use Medium or Strong; light blur can still be recognised.</string>
+    <string name="technique_mask">Solid mask</string>
+    <string name="technique_mask_desc">Covers faces completely. The most reliable option.</string>
+    <string name="technique_dead_pixels">Dead pixels &amp; noise</string>
+    <string name="technique_dead_pixels_desc">Stuck pixels, colour noise and scanlines. Looks like a glitch; on its own it\'s the weakest protection, so use Strong.</string>
+    <string name="technique_landmarks">Feature bars</string>
+    <string name="technique_landmarks_desc">Bars across the eyes, nose and mouth, the parts face detectors rely on most. Leaves the rest of the face visible.</string>
+
+    <string name="technique_invisible">Invisible cloak</string>
+    <string name="technique_invisible_desc">A faint trained pattern and a tiny change in face shape that confuse recognition AI while the photo looks almost the same. Not a guarantee: newer AI can learn to see through it.</string>
+
+    <!-- Parameters -->
+    <string name="param_coverage">Area size</string>
+    <string name="param_shape">Shape</string>
+    <string name="param_blocks">Blocks across face</string>
+    <string name="param_blur_radius">Blur amount</string>
+    <string name="param_blur_passes">Blur passes</string>
+    <string name="param_color">Colour</string>
+    <string name="param_density">Dead pixels (%)</string>
+    <string name="param_cluster">Dead pixel size</string>
+    <string name="param_noise">Colour noise</string>
+    <string name="param_palette">Pixel colours</string>
+    <string name="param_scanlines">Scanlines</string>
+    <string name="param_thickness">Bar thickness</string>
+    <string name="param_opacity">Opacity</string>
+    <string name="param_style">Bar pattern</string>
+    <string name="param_visibility">Cloak strength (higher is more visible)</string>
+    <string name="param_morph">Face shape change</string>
+
+    <!-- Options -->
+    <string name="option_oval">Oval</string>
+    <string name="option_rectangle">Rectangle</string>
+    <string name="option_black">Black</string>
+    <string name="option_white">White</string>
+    <string name="option_gray">Grey</string>
+    <string name="option_black_white">Black &amp; white</string>
+    <string name="option_rainbow">Rainbow</string>
+    <string name="option_mixed">Mixed</string>
+    <string name="option_off">Off</string>
+    <string name="option_on">On</string>
+    <string name="option_solid">Solid</string>
+    <string name="option_checker">Checkerboard</string>
+    <string name="option_noise">Noise</string>
+</resources>

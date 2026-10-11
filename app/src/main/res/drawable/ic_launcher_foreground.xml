@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- head -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:pathData="M54,28 C67,28 75,38 75,52 C75,68 66,80 54,80 C42,80 33,68 33,52 C33,38 41,28 54,28 Z" />
+    <!-- pixelated eye band -->
+    <path android:fillColor="#FFFFFF" android:pathData="M36,44h8v8h-8z M52,44h8v8h-8z M68,44h6v8h-6z" />
+    <path android:fillColor="#D8D48E" android:pathData="M44,44h8v8h-8z M60,44h8v8h-8z" />
+    <path android:fillColor="#9CC9B8" android:pathData="M40,52h8v6h-8z M56,52h8v6h-8z" />
+    <!-- mouth -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M46,68 Q54,73 62,68" />
+</vector>
