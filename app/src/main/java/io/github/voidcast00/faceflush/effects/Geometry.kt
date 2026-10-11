@@ -66,7 +66,13 @@ data class Landmarks(val eyeA: Pt, val eyeB: Pt, val nose: Pt, val mouthA: Pt, v
 }
 
 /** An area to disrupt, in source-image coordinates. */
-data class Region(val box: Box, val landmarks: Landmarks? = null, val wholeImage: Boolean = false)
+data class Region(
+    val box: Box,
+    val landmarks: Landmarks? = null,
+    val wholeImage: Boolean = false,
+    /** Max privacy result for this face; replaces the universal cloak when set. */
+    val pattern: FacePattern? = null,
+)
 
 /** Integer pixel bounds of a region inside a buffer, plus an inside test for oval or rectangle shapes. */
 internal class Shape private constructor(

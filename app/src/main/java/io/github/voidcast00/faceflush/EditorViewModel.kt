@@ -14,8 +14,11 @@ import io.github.voidcast00.faceflush.detect.FaceDetectors
 import io.github.voidcast00.faceflush.detect.detectDownscaled
 import io.github.voidcast00.faceflush.effects.Box
 import io.github.voidcast00.faceflush.effects.CanonicalField
+import io.github.voidcast00.faceflush.effects.FacePattern
+import io.github.voidcast00.faceflush.effects.Landmarks
 import io.github.voidcast00.faceflush.effects.InvisibleAssets
 import io.github.voidcast00.faceflush.effects.EffectRenderer
+import io.github.voidcast00.faceflush.effects.Params
 import io.github.voidcast00.faceflush.effects.PixelBuffer
 import io.github.voidcast00.faceflush.effects.Region
 import io.github.voidcast00.faceflush.effects.RegionMode
@@ -23,6 +26,11 @@ import io.github.voidcast00.faceflush.effects.Strength
 import io.github.voidcast00.faceflush.effects.Technique
 import io.github.voidcast00.faceflush.io.ImageExporter
 import io.github.voidcast00.faceflush.io.ImageLoader
+import io.github.voidcast00.faceflush.max.MaxPrivacyWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -37,7 +45,15 @@ import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.random.Random
 
-data class FaceItem(val face: DetectedFace, val enabled: Boolean = true)
+/** [pattern] is set once Max privacy has optimised a cloak for this face. */
+data class FaceItem(val face: DetectedFace, val enabled: Boolean = true, val pattern: FacePattern? = null)
+
+data class MaxState(
+    val running: Boolean = false,
+    /** Null until the first progress report. */
+    val percent: Int? = null,
+    val secondsLeft: Int? = null,
+)
 
 data class EditorState(
     val loading: Boolean = false,
@@ -56,7 +72,10 @@ data class EditorState(
     val detecting: Boolean = false,
     val exporting: Boolean = false,
     val detector: DetectorKind = DetectorKind.YUNET,
+    val max: MaxState = MaxState(),
 ) {
+    val maxApplied get() = faces.count { it.pattern != null }
+
     val hasImage get() = original != null || loading
 }
 
@@ -84,6 +103,11 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     private var detector: Pair<FaceDetector, DetectorKind>? = null
     private var renderJob: Job? = null
     private var detectJob: Job? = null
+    private var sourceUri: Uri? = null
+    private val work = WorkManager.getInstance(app)
+
+    /** Face indices a running Max privacy job works on, in job order. */
+    private var maxFaces: List<Int> = emptyList()
 
     /** Trained cloak pattern and morph field from the lab; missing files just disable that part. */
     private val invisibleAssets by lazy {
@@ -98,6 +122,103 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch(Dispatchers.IO) { ImageExporter.clearShareCache(app) }
+        maxFaces = prefs.getString(KEY_MAX_FACES, "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }
+        viewModelScope.launch {
+            work.getWorkInfosForUniqueWorkFlow(MaxPrivacyWorker.WORK_NAME).collect { infos ->
+                infos.firstOrNull()?.let(::onMaxInfo)
+            }
+        }
+    }
+
+    /** Starts Max privacy for the enabled faces at the current cloak strength. */
+    fun startMax() {
+        val src = source ?: return
+        val s = _state.value
+        val faces = s.faces.withIndex().filter { it.value.enabled }
+        if (faces.isEmpty()) {
+            _events.trySend(EditorEvent.Message(R.string.max_no_faces))
+            return
+        }
+        val eps = (s.params[Params.VISIBILITY] ?: 8f) / 255f
+        _state.update { it.copy(max = MaxState(running = true)) }
+        viewModelScope.launch {
+            // The job works on a copy of the photo at detection size, so it survives the app closing
+            val (buf, scale) = withContext(Dispatchers.Default) {
+                val scale = minOf(1f, DETECT_SIDE.toFloat() / max(src.width, src.height))
+                val small = if (scale < 1f) {
+                    Bitmap.createScaledBitmap(src, (src.width * scale).toInt(), (src.height * scale).toInt(), true)
+                } else src
+                val pixels = IntArray(small.width * small.height)
+                small.getPixels(pixels, 0, small.width, 0, 0, small.width, small.height)
+                if (small !== src) small.recycle()
+                PixelBuffer(small.width, small.height, pixels) to scale
+            }
+            withContext(Dispatchers.IO) { MaxPrivacyWorker.writeSource(getApplication(), buf) }
+            maxFaces = faces.map { it.index }
+            prefs.edit()
+                .putString(KEY_MAX_FACES, maxFaces.joinToString(","))
+                .putString(KEY_MAX_URI, sourceUri?.toString())
+                .apply()
+            val landmarks = faces.map { (it.value.face.landmarks ?: Landmarks.estimate(it.value.face.box)).scaled(scale) }
+            val request = OneTimeWorkRequestBuilder<MaxPrivacyWorker>()
+                .setInputData(MaxPrivacyWorker.inputData(landmarks, eps, seed))
+                .build()
+            work.enqueueUniqueWork(MaxPrivacyWorker.WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+        }
+    }
+
+    fun cancelMax() {
+        work.cancelUniqueWork(MaxPrivacyWorker.WORK_NAME)
+    }
+
+    private fun onMaxInfo(info: WorkInfo) {
+        when (info.state) {
+            WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
+                val p = info.progress
+                val percent = if (p.keyValueMap.containsKey(MaxPrivacyWorker.KEY_PROGRESS)) {
+                    p.getInt(MaxPrivacyWorker.KEY_PROGRESS, 0)
+                } else null
+                val left = if (percent != null) p.getInt(MaxPrivacyWorker.KEY_SECONDS_LEFT, 0) else null
+                _state.update { it.copy(max = MaxState(running = true, percent = percent, secondsLeft = left)) }
+            }
+            WorkInfo.State.SUCCEEDED -> {
+                _state.update { it.copy(max = MaxState()) }
+                if (prefs.getString(KEY_MAX_DONE, null) == info.id.toString()) return
+                val count = info.outputData.getInt(MaxPrivacyWorker.KEY_FACES, 0)
+                val eps = info.outputData.getFloat(MaxPrivacyWorker.KEY_EPS, 0f)
+                viewModelScope.launch { applyMaxResults(info.id.toString(), count, eps) }
+            }
+            WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
+                val wasRunning = _state.value.max.running
+                _state.update { it.copy(max = MaxState()) }
+                if (wasRunning && info.state == WorkInfo.State.FAILED) {
+                    _events.trySend(EditorEvent.Message(R.string.max_failed))
+                }
+            }
+        }
+    }
+
+    /** Puts finished Max privacy patterns on their faces, reopening the photo if the app was closed. */
+    private suspend fun applyMaxResults(id: String, count: Int, eps: Float) {
+        val fields = withContext(Dispatchers.IO) { MaxPrivacyWorker.readResults(getApplication(), count) } ?: return
+        val jobUri = prefs.getString(KEY_MAX_URI, null)?.let(Uri::parse) ?: return
+        if (source == null && !_state.value.loading) open(jobUri)
+        // Wait for the photo and its faces (detection gives the same face order as when the job started)
+        while (_state.value.loading || _state.value.detecting) delay(100)
+        prefs.edit().putString(KEY_MAX_DONE, id).apply()
+        // Another photo was opened meanwhile: the result belongs to a different picture
+        if (source == null || sourceUri != jobUri) return
+        val byFace = maxFaces.zip(fields).toMap()
+        updateAndRender { s ->
+            val faces = s.faces.mapIndexed { i, f -> byFace[i]?.let { f.copy(pattern = FacePattern(it, eps)) } ?: f }
+            s.copy(
+                faces = faces,
+                technique = Technique.INVISIBLE,
+                regionMode = RegionMode.FACES,
+                params = if (s.technique == Technique.INVISIBLE) s.params else Technique.INVISIBLE.paramsFor(Strength.MEDIUM),
+                strength = if (s.technique == Technique.INVISIBLE) s.strength else Strength.MEDIUM,
+            )
+        }
     }
 
     fun open(uri: Uri) {
@@ -106,6 +227,14 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val loaded = withContext(Dispatchers.IO) { ImageLoader.load(getApplication(), uri) }
+                sourceUri = uri
+                try {
+                    // Lets a finished Max privacy job reopen this photo after the app was closed
+                    getApplication<Application>().contentResolver
+                        .takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (e: SecurityException) {
+                    Log.i(TAG, "No persistable permission for $uri")
+                }
                 val bmp = loaded.bitmap
                 val scale = minOf(1f, PREVIEW_SIDE.toFloat() / max(bmp.width, bmp.height))
                 val preview = withContext(Dispatchers.Default) {
@@ -279,7 +408,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         return when (s.regionMode) {
             RegionMode.WHOLE_IMAGE ->
                 listOf(Region(Box(0f, 0f, s.sourceWidth.toFloat(), s.sourceHeight.toFloat()), wholeImage = true))
-            RegionMode.FACES -> s.faces.filter { it.enabled }.map { Region(it.face.box, it.face.landmarks) } + manual
+            RegionMode.FACES -> s.faces.filter { it.enabled }.map { Region(it.face.box, it.face.landmarks, pattern = it.pattern) } + manual
             RegionMode.MANUAL -> manual
         }
     }
@@ -287,6 +416,9 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val TAG = "EditorViewModel"
         const val KEY_DETECTOR = "detector"
+        const val KEY_MAX_FACES = "max_faces"
+        const val KEY_MAX_URI = "max_uri"
+        const val KEY_MAX_DONE = "max_done"
         const val PREVIEW_SIDE = 1280
         const val DETECT_SIDE = 1600
         const val PREVIEW_DEBOUNCE_MS = 60L

@@ -65,7 +65,12 @@ object EffectRenderer {
                 Technique.INVISIBLE -> {
                     val lm = (region.landmarks ?: Landmarks.estimate(region.box)).scaled(scale)
                     invisible?.morph?.let { morph(buf, lm, it, p(Params.MORPH)) }
-                    invisible?.cloak?.let { cloak(buf, lm, it, p(Params.VISIBILITY) / 255f) }
+                    val own = region.pattern
+                    if (own != null) {
+                        cloak(buf, lm, own.field, own.eps)
+                    } else {
+                        invisible?.cloak?.let { cloak(buf, lm, it, p(Params.VISIBILITY) / 255f) }
+                    }
                 }
             }
         }

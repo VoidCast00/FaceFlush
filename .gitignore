@@ -13,3 +13,6 @@
 *.jks
 __pycache__/
 *.pyc
+
+# Max privacy engine (75 MB), built by lab/export_max.py
+app/src/main/assets/max_cloak.tflite

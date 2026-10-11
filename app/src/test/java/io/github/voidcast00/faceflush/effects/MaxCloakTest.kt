@@ -34,9 +34,9 @@ class MaxCloakTest {
         val n = CanonicalFace.SIZE
         val target = FloatArray(n * n * 3) { if (it % 3 == 0) 0.8f else -0.5f } // NHWC: red +0.8, green/blue -0.5
         val model = FakeModel(target)
-        val field = MaxCloak(model).optimise(image(), lm, 8f / 255f, steps = 40, start = null, seed = 1)
+        val field = MaxCloak(model).optimise(image(), lm, 8f / 255f, steps = 40, start = null, seed = 1, eot = 2)
 
-        assertEquals(41, model.calls) // reference embeddings + 40 steps
+        assertEquals(81, model.calls) // reference embeddings + 40 steps x 2 transforms
         assertEquals(0f, model.epsSeen.first()) // references come from the clean face
         // Fixed-size signed steps (10 / 40 = 0.25) settle within one step of the goal
         assertEquals(0.8f, field.sample(0, 50.0, 50.0), 0.26f)

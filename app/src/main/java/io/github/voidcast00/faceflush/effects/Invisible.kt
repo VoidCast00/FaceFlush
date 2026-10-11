@@ -13,6 +13,9 @@ import kotlin.math.sqrt
  */
 class InvisibleAssets(val cloak: CanonicalField?, val morph: CanonicalField?)
 
+/** A cloak optimised for one particular face by "Max privacy", and the strength it was made for. */
+class FacePattern(val field: CanonicalField, val eps: Float)
+
 // Must match lab/faceflush_lab/cloak.py
 private const val EDGE_FEATHER = 10.0
 private const val TEXTURE_WINDOW = 5.0

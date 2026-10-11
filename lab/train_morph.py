@@ -1,7 +1,7 @@
 """Trains the universal face-shape morph and benchmarks it.
 
-Each movable control point may move at most --budget canonical pixels (the eye distance is about
-35 px, so 3 px is roughly 8%). The moves are optimised over the training faces so the morphed
+No pixel of the face may move more than --budget canonical pixels (the eye distance is about
+35 px, so 3 px is roughly 8%); see morph.limit. The moves are optimised over the training faces so the morphed
 face drifts away from its own clean embedding, with the same random transforms as the cloak.
 
 Usage: python train_morph.py [--budget 3] [--steps 1500]
@@ -29,7 +29,12 @@ def main():
     ap.add_argument("--batch", type=int, default=48)
     ap.add_argument("--models", default="arcface_r50,facenet")
     ap.add_argument("--out", default="morph_field")
+    ap.add_argument("--bench-only", action="store_true", help="re-run the bench on a saved field")
     args = ap.parse_args()
+    if args.bench_only:
+        field = np.load(RESULTS / f"{args.out}.npy")
+        moves = torch.from_numpy(np.loadtxt(RESULTS / f"{args.out}_moves.txt", dtype=np.float32))
+        return run_bench(args, field, moves)
 
     dev = "cuda"
     torch.manual_seed(0)
@@ -42,8 +47,9 @@ def main():
     t0 = time.time()
     for step in range(args.steps):
         x = data[torch.randint(len(data), (args.batch,))].to(dev)
-        moves = args.budget * torch.tanh(w)
-        adv = random_transform(morph.apply_crop(x, morph.field_from_moves(basis, moves)))
+        moves = 3 * args.budget * torch.tanh(w)
+        field = morph.limit(morph.field_from_moves(basis, moves), args.budget)
+        adv = random_transform(morph.apply_crop(x, field))
         loss = 0.0
         for net in nets.values():
             with torch.no_grad():
@@ -56,14 +62,19 @@ def main():
         if step % 200 == 0 or step == args.steps - 1:
             print(f"step {step:5d}  mean cos {loss.item():.3f}  {time.time() - t0:.0f}s", flush=True)
 
-    moves = (args.budget * torch.tanh(w)).detach()
-    field = morph.field_from_moves(basis, moves).cpu().numpy().astype(np.float32)
+    moves = (3 * args.budget * torch.tanh(w)).detach()
+    field = morph.limit(morph.field_from_moves(basis, moves), args.budget).cpu().numpy().astype(np.float32)
+    print("largest pixel move:", float(np.linalg.norm(field, axis=0).max()), flush=True)
     RESULTS.mkdir(parents=True, exist_ok=True)
     np.save(RESULTS / f"{args.out}.npy", field)
     np.savetxt(RESULTS / f"{args.out}_moves.txt", moves.cpu().numpy(), fmt="%.2f")
 
     del data, nets
     torch.cuda.empty_cache()
+    run_bench(args, field, moves)
+
+
+def run_bench(args, field: np.ndarray, moves: torch.Tensor):
     bench = Bench(["arcface_r50", "sface", "facenet"])
     rows = []
     for amount in (0.5, 1.0, 1.5):

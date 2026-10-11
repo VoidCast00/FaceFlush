@@ -184,3 +184,49 @@ transfer-boosting tricks (momentum, input diversity) before building the phone s
 - The quick-cloak pattern now ships in the app (`assets/cloak_pattern.bin`, 147 KB).
 - Fullscreen preview: on HyperOS the dialog's bottom edge sat under the navigation bar, so the
   compare and boxes buttons couldn't be reached. They moved into a top bar next to the close button.
+
+## 2026-10-11: Max privacy at higher visibility, and a broken morph
+
+**Max privacy at ε16** (SFace only, same setup as above):
+
+| | ArcFace (never seen) | SFace (attacked) | FaceNet (never seen) | PSNR |
+|---|---|---|---|---|
+| ε8 | 85% (90% social) | 1% | 42% | 39.5 dB |
+| ε16 | **31%** (39% social) | 0% | **2%** | 34.4 dB |
+
+Doubling the strength makes the cloak carry over to models it never saw far better: ArcFace drops
+from 85% to 31%, and FaceNet to 2% without ever being attacked. The price is visibility: a pastel
+colour shimmer over the face and the background around it. ε8 is faint at phone size; ε16 is
+obvious when you look for it. Rendered on Vermeer's *Girl with a Pearl Earring* (public domain)
+with `lab/demo_max.py`:
+
+![Max privacy at ε8, 12 and 16](img/max_demo.jpg)
+
+**Face morph, first attempt: failed.** Training "worked" (similarity to the clean face fell to
+0.30), but rendering it showed why:
+
+![First morph: grotesque deformation](img/morph_v1_overshoot.jpg)
+
+Each of the 12 control points was limited to 3 px, but Gaussian RBF interpolation between close
+points (eyes, brows, mouth corners) overshoots, so skin between them moved up to 14 px. The
+optimiser happily used that. Fix: cap the displacement of *every pixel* (`morph.limit`), not just
+the control points. Retraining. (The bench at the end of the run also crashed on float64 maps
+passed to `cv2.remap`; fixed.)
+
+## 2026-10-11: Max privacy on the phone
+
+- The engine is now SFace only: `max_cloak.tflite`, 75 MB (was 129 MB with FaceNet). Its gradient
+  matches TensorFlow's (cosine 0.999999).
+- Runs on the Redmi Note 13 Pro+ through TFLite 2.16.1 with the Flex delegate (72 of 445 ops need
+  TensorFlow kernels). One model call takes about 0.25 s, so a face (150 steps × 8 transforms,
+  same as the PC simulation) takes about 5 minutes.
+- Runs as a WorkManager foreground job with a progress notification and a Cancel button; the
+  result comes back into the editor even if the app was closed in between.
+- An explainer sheet with the measured numbers appears the first time Invisible is picked, and
+  before every Max run the user has to tick "I understand this is not a guarantee".
+- Permissions added: notifications and a data-sync foreground service. WorkManager also tried to add
+  network-state and boot permissions; both are removed. Still no internet access.
+- **Size problem:** the TensorFlow Flex runtime is 68 MB and the model 75 MB, so the arm64 APK is
+  about 170 MB in release. A custom Flex build with only the 72 ops used should shrink the runtime
+  a lot.
+- The model file isn't in git (75 MB); build it with `lab/export_max.py`.

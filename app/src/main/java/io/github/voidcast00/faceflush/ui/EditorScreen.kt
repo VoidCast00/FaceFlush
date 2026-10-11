@@ -88,6 +88,7 @@ import io.github.voidcast00.faceflush.effects.Params
 import io.github.voidcast00.faceflush.effects.RegionMode
 import io.github.voidcast00.faceflush.effects.Strength
 import io.github.voidcast00.faceflush.effects.Technique
+import io.github.voidcast00.faceflush.max.MaxPrivacyWorker
 import io.github.voidcast00.faceflush.ui.theme.SectionLabel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -319,8 +320,35 @@ private fun Controls(state: EditorState, vm: EditorViewModel, modifier: Modifier
         }
 
         MoreSettings(state, vm)
+
+        if (state.technique == Technique.INVISIBLE) {
+            MaxPrivacyCard(state, onStart = vm::startMax, onCancel = vm::cancelMax)
+        }
+    }
+
+    // The honest explainer, shown the first time the Invisible technique is picked
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE) }
+    var showInfo by remember { mutableStateOf(false) }
+    LaunchedEffect(state.technique) {
+        if (state.technique == Technique.INVISIBLE && !prefs.getBoolean(KEY_INFO_SEEN, false)) showInfo = true
+    }
+    if (showInfo) {
+        val close = {
+            prefs.edit().putBoolean(KEY_INFO_SEEN, true).apply()
+            showInfo = false
+        }
+        InvisibleInfoSheet(
+            minutesPerFace = MaxPrivacyWorker.estimateMinutes(1),
+            totalMinutes = 0,
+            requireConsent = false,
+            onDismiss = close,
+            onConfirm = close,
+        )
     }
 }
+
+private const val KEY_INFO_SEEN = "invisible_info_seen"
 
 @Composable
 private fun TechniqueRow(selected: Technique, onSelect: (Technique) -> Unit) {

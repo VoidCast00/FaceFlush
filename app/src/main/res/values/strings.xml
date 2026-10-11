@@ -102,4 +102,40 @@
     <string name="option_solid">Solid</string>
     <string name="option_checker">Checkerboard</string>
     <string name="option_noise">Noise</string>
+    <!-- Max privacy -->
+    <string name="cancel">Cancel</string>
+    <string name="max_title">Max privacy</string>
+    <string name="max_body">Tunes the cloak to this exact photo, right on your phone. Much stronger than the quick cloak against the AI it is tuned on. Runs in the background.</string>
+    <string name="max_start">Start (about %1$d min)</string>
+    <string name="max_how">How well does it work?</string>
+    <string name="max_running">%1$d%% · about %2$d min left</string>
+    <string name="max_starting">Starting…</string>
+    <plurals name="max_applied">
+        <item quantity="one">Applied to %1$d face at cloak strength %2$d. Run again after changing the strength.</item>
+        <item quantity="other">Applied to %1$d faces at cloak strength %2$d. Run again after changing the strength.</item>
+    </plurals>
+    <string name="max_again">Run again</string>
+    <string name="max_no_faces">Max privacy needs at least one detected face.</string>
+    <string name="max_failed">Max privacy stopped before it finished.</string>
+    <string name="max_channel">Max privacy</string>
+    <string name="max_notification_title">FaceFlush: Max privacy</string>
+    <string name="max_notification_starting">Getting ready…</string>
+    <string name="max_notification_left">About %1$d min left</string>
+    <string name="max_notification_done">Max privacy finished</string>
+    <string name="max_notification_done_text">Tap to review the photo, then save or share it.</string>
+
+    <!-- Invisible protection explainer -->
+    <string name="info_title">How invisible protection works</string>
+    <string name="info_what_title">What it does</string>
+    <string name="info_what">Recognition AI turns a face into a list of numbers and compares those lists. FaceFlush adds a faint, trained pattern (and optionally a tiny change in face shape) that pushes your numbers away from you, while people barely see a difference.</string>
+    <string name="info_tests_title">What our tests showed</string>
+    <string name="info_tests">Measured on 150 test faces, also after Instagram-style recompression:\n• Quick cloak alone: a strong AI still recognised 99 in 100.\n• Max privacy, strength 8 (faint shimmer): the AI it is tuned on recognised only 1 in 100, but a strong AI it never saw still recognised about 85 in 100.\n• Max privacy, strength 16 (visible colour shimmer): the strong AI it never saw recognised about 31 to 39 in 100.</string>
+    <string name="info_race_title">It is an arms race</string>
+    <string name="info_race">A similar tool (Fawkes, 2020) stopped working once newer AI came out. Assume any invisible protection will be beaten eventually, and that big companies use AI we cannot test against.</string>
+    <string name="info_cost_title">The cost</string>
+    <string name="info_cost">Max privacy takes about %1$d min per face and uses a lot of battery while it runs. Keep the phone charging if you can.</string>
+    <string name="info_advice_title">For photos that really matter</string>
+    <string name="info_advice">Use Pixelate on Strong or Solid mask. They were the only options that beat every AI we tested.</string>
+    <string name="info_understand">I understand this is not a guarantee</string>
+    <string name="info_ok">Got it</string>
 </resources>

@@ -91,6 +91,14 @@ class CanonicalField(val channels: Int, val size: Int, private val data: FloatAr
         return top * (1 - fy) + bottom * fy
     }
 
+    /** Writes the field in the same format [read] expects. */
+    fun write(output: java.io.OutputStream) {
+        val bb = java.nio.ByteBuffer.allocate(16 + data.size * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        bb.put("FFPT".toByteArray(Charsets.US_ASCII)).putInt(1).putInt(channels).putInt(size)
+        bb.asFloatBuffer().put(data)
+        output.write(bb.array())
+    }
+
     companion object {
         fun read(input: java.io.InputStream): CanonicalField {
             val bytes = input.readBytes()

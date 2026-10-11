@@ -45,6 +45,10 @@ class InvisibleTest {
         assertEquals(4, field.size)
         assertEquals(values[16 + 5], field.sample(1, 1.0, 1.0), 0f)
         assertEquals((values[0] + values[1]) / 2, field.sample(0, 0.5, 0.0), 1e-6f)
+
+        val out = java.io.ByteArrayOutputStream()
+        field.write(out)
+        assertArrayEquals(bb.array(), out.toByteArray())
     }
 
     @Test

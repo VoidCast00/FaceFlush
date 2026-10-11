@@ -5,17 +5,17 @@ The phone optimises a cloak pattern for each face. It needs, for the current pat
 that loss with respect to the pattern. TensorFlow's GradientTape records that computation and the
 TFLite converter keeps it as an ordinary model, so the app just feeds tensors in and reads them out.
 
-Models inside (both permissively licensed): SFace (Apache-2.0) and FaceNet VGGFace2 (MIT).
+Model inside: SFace (Apache-2.0). FaceNet was dropped: in lab/sim_max.py attacking it as well did
+not help against the held-out ArcFace, and it added 89 MB and ~50% more time per photo.
 
 One signature (a second one would store every weight twice), images NHWC, RGB in [0, 1],
 aligned 112x112 crops:
-  step(x, pattern, weight, eps, ref_sface, ref_facenet, angle, scale, shift, down)
-     -> loss (1,), grad (1,112,112,3), sface (1,128), facenet (1,512)
+  step(x, pattern, weight, eps, ref_sface, angle, scale, shift, down)
+     -> loss (1,), grad (1,112,112,3), sface (1,128)
      weight = edge mask * texture weight (computed in Kotlin, as in cloak.py)
      angle/scale/shift/down = random transform for this step (re-alignment jitter, downscale)
-     sface/facenet = L2-normalised embeddings of the transformed, cloaked face. Called once with
-     eps=0 and the identity transform, they are the reference embeddings of the clean face.
-Weights are stored as float16 to halve the size; maths still runs in float32.
+     sface = L2-normalised embedding of the transformed, cloaked face. Called once with
+     eps=0 and the identity transform, it is the reference embedding of the clean face.
 
 Run with the TensorFlow venv: python export_max.py  -> $LAB/results/max_cloak.tflite
 """
@@ -75,37 +75,32 @@ def transform(x, angle, scale, shift, down):
 
 def main():
     sface_mod, sface_fn = convert_onnx("sface", "face_recognition_sface_2021dec.onnx")
-    facenet_mod, facenet_fn = convert_onnx("facenet", "facenet_vggface2.onnx")
     sface_in = list(sface_fn.structured_input_signature[1].keys())[0]
-    facenet_in = list(facenet_fn.structured_input_signature[1].keys())[0]
-    print("inputs:", sface_fn.structured_input_signature, facenet_fn.structured_input_signature)
+    print("inputs:", sface_fn.structured_input_signature)
 
-    def embed_both(x):
+    def embed(x):
         es = list(sface_fn(**{sface_in: x * 255.0}).values())[0]
-        f = tf.image.resize(x, [160, 160])
-        ef = list(facenet_fn(**{facenet_in: (f * 255.0 - 127.5) / 128.0}).values())[0]
-        return l2(tf.reshape(es, [1, -1])), l2(tf.reshape(ef, [1, -1]))
+        return l2(tf.reshape(es, [1, -1]))
 
     img = tf.TensorSpec([1, SIZE, SIZE, 3], tf.float32)
 
     class MaxCloak(tf.Module):
         def __init__(self):
             super().__init__()
-            self.keep = [sface_mod, facenet_mod]
+            self.keep = [sface_mod]
 
         @tf.function(input_signature=[
             img, img, tf.TensorSpec([1, SIZE, SIZE, 1], tf.float32), tf.TensorSpec([1], tf.float32),
-            tf.TensorSpec([1, 128], tf.float32), tf.TensorSpec([1, 512], tf.float32),
-            tf.TensorSpec([1], tf.float32), tf.TensorSpec([1], tf.float32), tf.TensorSpec([2], tf.float32),
+            tf.TensorSpec([1, 128], tf.float32), tf.TensorSpec([1], tf.float32), tf.TensorSpec([1], tf.float32), tf.TensorSpec([2], tf.float32),
             tf.TensorSpec([1], tf.float32),
         ])
-        def step(self, x, pattern, weight, eps, ref_sface, ref_facenet, angle, scale, shift, down):
+        def step(self, x, pattern, weight, eps, ref_sface, angle, scale, shift, down):
             with tf.GradientTape() as tape:
                 tape.watch(pattern)
                 adv = tf.clip_by_value(x + eps[0] * weight * pattern, 0.0, 1.0)
-                s, f = embed_both(transform(adv, angle, scale, shift, down))
-                loss = tf.reduce_sum(s * ref_sface) + tf.reduce_sum(f * ref_facenet)
-            return {"loss": tf.reshape(loss, [1]), "grad": tape.gradient(loss, pattern), "sface": s, "facenet": f}
+                s = embed(transform(adv, angle, scale, shift, down))
+                loss = tf.reduce_sum(s * ref_sface)
+            return {"loss": tf.reshape(loss, [1]), "grad": tape.gradient(loss, pattern), "sface": s}
 
     module = MaxCloak()
     saved = RESULTS / "max_cloak_saved"
@@ -116,8 +111,6 @@ def main():
     conv = tf.lite.TFLiteConverter.from_saved_model(str(saved), signature_keys=["step"])
     conv.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS, tf.lite.OpsSet.SELECT_TF_OPS]
     conv.experimental_enable_resource_variables = True
-    conv.optimizations = [tf.lite.Optimize.DEFAULT]
-    conv.target_spec.supported_types = [tf.float16]
     out = RESULTS / "max_cloak.tflite"
     out.write_bytes(conv.convert())
     print("wrote", out, out.stat().st_size // 1024, "KiB")
@@ -131,9 +124,9 @@ def main():
     ident = dict(angle=np.zeros(1, np.float32), scale=np.ones(1, np.float32), shift=np.zeros(2, np.float32),
                  down=np.ones(1, np.float32))
     clean = step(x=x, pattern=pattern, weight=np.ones((1, SIZE, SIZE, 1), np.float32), eps=np.zeros(1, np.float32),
-                 ref_sface=np.zeros((1, 128), np.float32), ref_facenet=np.zeros((1, 512), np.float32), **ident)
+                 ref_sface=np.zeros((1, 128), np.float32), **ident)
     args = dict(x=x, pattern=pattern, weight=np.ones((1, SIZE, SIZE, 1), np.float32), eps=np.array([8 / 255], np.float32),
-                ref_sface=clean["sface"], ref_facenet=clean["facenet"],
+                ref_sface=clean["sface"],
                 angle=np.array([math.radians(3)], np.float32), scale=np.array([1.02], np.float32),
                 shift=np.array([0.01, -0.02], np.float32), down=np.array([0.7], np.float32))
     lite = step(**args)

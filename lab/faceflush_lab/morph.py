@@ -54,6 +54,16 @@ def field_from_moves(basis: torch.Tensor, moves: torch.Tensor) -> torch.Tensor:
     return torch.einsum("nhw,nc->chw", basis, moves)
 
 
+def limit(field: torch.Tensor, budget: float) -> torch.Tensor:
+    """Scales the field down so no pixel moves more than `budget` canonical px.
+
+    Needed because Gaussian RBF interpolation between close control points (eyes, brows) overshoots:
+    with only the point moves capped at 3 px, the first trained field moved skin by up to 14 px.
+    """
+    peak = field.norm(dim=0).max()
+    return field * torch.clamp(budget / (peak + 1e-8), max=1.0)
+
+
 def apply_crop(x: torch.Tensor, field: torch.Tensor) -> torch.Tensor:
     """Moves image content by `field` (canonical px). Backward sampling: out(v) = x(v - field(v))."""
     n = x.shape[0]
@@ -73,11 +83,12 @@ def apply_image(img_bgr: np.ndarray, landmarks: np.ndarray, field: np.ndarray, a
     a = m[:, :2]
     a_inv = np.linalg.inv(a)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    cx = m[0, 0] * xx + m[0, 1] * yy + m[0, 2]
-    cy = m[1, 0] * xx + m[1, 1] * yy + m[1, 2]
+    # cv2.remap needs float32 maps (m is float64)
+    cx = (m[0, 0] * xx + m[0, 1] * yy + m[0, 2]).astype(np.float32)
+    cy = (m[1, 0] * xx + m[1, 1] * yy + m[1, 2]).astype(np.float32)
     fx = cv2.remap(field[0], cx - 0.5, cy - 0.5, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
     fy = cv2.remap(field[1], cx - 0.5, cy - 0.5, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
     # Displacement from canonical px back to image px
-    dx = (a_inv[0, 0] * fx + a_inv[0, 1] * fy) * amount
-    dy = (a_inv[1, 0] * fx + a_inv[1, 1] * fy) * amount
+    dx = ((a_inv[0, 0] * fx + a_inv[0, 1] * fy) * amount).astype(np.float32)
+    dy = ((a_inv[1, 0] * fx + a_inv[1, 1] * fy) * amount).astype(np.float32)
     return cv2.remap(img_bgr, xx - dx, yy - dy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)

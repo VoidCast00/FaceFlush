@@ -14,6 +14,12 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    androidResources {
+        // The Max privacy model is memory-mapped straight out of the APK
+        noCompress += "tflite"
     }
 
     splits {
@@ -75,7 +81,13 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.opencv)
+    // "Max privacy" engine: the model's gradient ops need TensorFlow kernels (select TF ops)
+    implementation(libs.tflite)
+    implementation(libs.tflite.select.tf.ops)
+    implementation(libs.androidx.work.runtime.ktx)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.junit)
 }

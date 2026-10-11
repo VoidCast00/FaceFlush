@@ -53,6 +53,7 @@ class MaxCloak(private val model: CloakModel) {
         steps: Int,
         start: CanonicalField?,
         seed: Long,
+        eot: Int = 1,
         onStep: (Int) -> Unit = {},
         isCancelled: () -> Boolean = { false },
     ): CanonicalField {
@@ -69,9 +70,16 @@ class MaxCloak(private val model: CloakModel) {
             .embeddings
         val rng = Random(seed)
         val stepSize = 10f / steps
+        val grad = FloatArray(pattern.size)
         for (i in 0 until steps) {
+            // Average the gradient over `eot` random transforms (expectation over transformation)
+            grad.fill(0f)
+            for (k in 0 until eot) {
+                if (isCancelled()) break
+                val g = model.step(crop, pattern, weight, eps, refs, CloakTransform.random(rng)).grad
+                for (j in grad.indices) grad[j] += g[j]
+            }
             if (isCancelled()) break
-            val grad = model.step(crop, pattern, weight, eps, refs, CloakTransform.random(rng)).grad
             for (j in pattern.indices) pattern[j] = (pattern[j] - stepSize * sign(grad[j])).coerceIn(-1f, 1f)
             onStep(i + 1)
         }
