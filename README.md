@@ -1,11 +1,23 @@
 # FaceFlush
 
+> [!WARNING]
+> **This is a vibe-coded app.** It was built largely by an AI coding assistant (Claude Code)
+> under one person's direction, not by a security team. It hasn't been independently audited, and
+> it can contain bugs or give a false sense of safety.
+>
+> No protection against face recognition is guaranteed. The "invisible" techniques especially are
+> an arms race, and newer models can learn to see through them. For photos that really matter,
+> use strong pixelation or a solid mask, or don't share the photo.
+
 Android app that hides faces from AI and facial recognition before you share a photo.
 Pick a photo, choose a technique, adjust the strength, then save or share the result.
 
-- **Pixelate**, **Blur**, **Solid mask**: visible obscuring, the most reliable protection
+- **Solid mask**, **Pixelate** (Strong): visible obscuring, the most reliable protection we measured
+- **Blur**: only good at Strong, and even then the strongest model we tested still recognised most
+  faces (see [docs/DIARY.md](docs/DIARY.md))
 - **Dead pixels & noise**: stuck pixels, colour noise and scanlines (weakest on its own)
 - **Feature bars**: bars across the eyes, nose and mouth that break face detectors
+- **Invisible cloak** (in development): a faint trained pattern plus a tiny face-shape change
 
 Faces are found on-device with OpenCV's [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
 detector, or Android's built-in detector as a lightweight fallback. You can skip detected faces or draw your own areas.
@@ -25,12 +37,17 @@ Requires JDK 17 and the Android SDK (platform 35).
 ./gradlew testDebugUnitTest    # effect unit tests
 ```
 
+## How it was made
+
+[docs/DIARY.md](docs/DIARY.md) is a running log of what was built, tried, trained and measured,
+including what didn't work. [lab/](lab/) holds the scripts that train and benchmark the invisible
+techniques on a PC with a GPU.
+
 ## Roadmap
 
-1. Photos (done)
-2. Video
-3. Adversarial "cloaking" (near-invisible perturbations)
-4. F-Droid release
+1. Photos with visible techniques (done)
+2. Invisible cloak: quick pattern, face morph, on-device "Max privacy" (in progress)
+3. Video
 
 ## Credits
 
