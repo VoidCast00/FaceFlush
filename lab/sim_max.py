@@ -10,6 +10,8 @@ Optional tricks from the transfer literature (all off by default = the original 
   --ti 2           TI: blur each gradient (Gaussian sigma in canonical px) before using it
   --chroma 0.3     colour limit: the pattern lives in brightness + two colour-difference channels;
                    colour may only use this fraction of the budget (0 = brightness only)
+  --jnd 1.5        per-pixel limit = this many just-noticeable differences (capped by eps), instead
+                   of the texture weight: keeps smooth mid-tone skin below what the eye notices
 
 Usage: python sim_max.py [--eps 8] [--steps 150] [--probes 150] [--momentum 0.9] [--ti 2] [--chroma 0.3]
 Writes $LAB/results/max_sim_<attack>_eps<eps>[_<tricks>].md.
@@ -29,7 +31,7 @@ import torch.nn.functional as F
 from faceflush_lab import models as M
 from faceflush_lab.align import align
 from faceflush_lab.bench import CLEAN_POSTS, DEFAULT_POSTS, Bench, table
-from faceflush_lab.cloak import apply_crop, apply_image, edge_mask
+from faceflush_lab.cloak import apply_crop, apply_image, edge_mask, jnd_t
 from faceflush_lab.paths import RESULTS
 from train_cloak import random_transform
 
@@ -70,7 +72,8 @@ def rgb_start(start: np.ndarray, chroma: float | None) -> np.ndarray:
 
 
 def make_protect(attack: dict, eps: float, steps: int, eot: int, start: np.ndarray | None, dev: str,
-                 momentum: float = 0.0, ti: float = 0.0, chroma: float | None = None):
+                 momentum: float = 0.0, ti: float = 0.0, chroma: float | None = None,
+                 jnd: float | None = None):
     mask = torch.from_numpy(edge_mask()).to(dev)[None, None]
 
     def protect(img, lm, rng):
@@ -78,13 +81,15 @@ def make_protect(attack: dict, eps: float, steps: int, eot: int, start: np.ndarr
         x = torch.from_numpy(crop[:, :, ::-1].astype(np.float32) / 255.0).permute(2, 0, 1)[None].to(dev)
         with torch.no_grad():
             refs = {n: m(x) for n, m in attack.items()}
+            # From the clean face only, so the optimiser can't earn extra room by adding texture
+            weight = (jnd * jnd_t(x) / (255 * eps)).clamp(max=1) if jnd else None
         init = (torch.from_numpy(rgb_start(start, chroma)).to(dev)[None] if start is not None
                 else torch.zeros(1, 3, 112, 112, device=dev))
         pattern = init.clone().requires_grad_(True)
         velocity = torch.zeros_like(pattern)
         step_size = 10.0 / steps  # lets the pattern sweep its whole range a few times
         for _ in range(steps):
-            adv = apply_crop(x.expand(eot, -1, -1, -1), to_rgb(pattern[0], chroma), eps, mask)
+            adv = apply_crop(x.expand(eot, -1, -1, -1), to_rgb(pattern[0], chroma), eps, mask, weight)
             adv = random_transform(adv)
             loss = sum((m(adv) * refs[n]).sum(1).mean() for n, m in attack.items())
             grad, = torch.autograd.grad(loss, pattern)
@@ -97,7 +102,7 @@ def make_protect(attack: dict, eps: float, steps: int, eot: int, start: np.ndarr
                 pattern -= step_size * grad.sign()
                 pattern.clamp_(-1, 1)
         rgb = to_rgb(pattern[0].detach(), chroma).cpu().numpy()
-        return apply_image(img, lm, rgb, eps)
+        return apply_image(img, lm, rgb, eps, None if weight is None else weight[0, 0].cpu().numpy())
 
     return protect
 
@@ -123,6 +128,7 @@ def main():
     ap.add_argument("--momentum", type=float, default=0.0)
     ap.add_argument("--ti", type=float, default=0.0, help="gradient blur sigma, canonical px")
     ap.add_argument("--chroma", type=float, default=None, help="colour share of the budget (0..1)")
+    ap.add_argument("--jnd", type=float, default=None, help="per-pixel limit in just-noticeable differences")
     ap.add_argument("--clean", action="store_true", help="also test cloak-removal tricks (blur, WebP, ...)")
     args = ap.parse_args()
 
@@ -134,10 +140,11 @@ def main():
         f"_mi{args.momentum:g}" if args.momentum else "",
         f"_ti{args.ti:g}" if args.ti else "",
         f"_c{args.chroma:g}" if args.chroma is not None else "",
+        f"_jnd{args.jnd:g}" if args.jnd else "",
         "_clean" if args.clean else "",
     ])
     protect = make_protect(attack, args.eps / 255.0, args.steps, args.eot, start, dev,
-                           momentum=args.momentum, ti=args.ti, chroma=args.chroma)
+                           momentum=args.momentum, ti=args.ti, chroma=args.chroma, jnd=args.jnd)
     changes = []
 
     def measured(img, lm, rng):
@@ -156,7 +163,7 @@ def main():
     luma, colour = np.mean(changes, 0)
     report = (f"# Max privacy simulation\n\nattacked: {args.attack} (arcface held out), ε{args.eps:g}, "
               f"{args.steps} steps × {args.eot} transforms, warm start: {start is not None}, "
-              f"momentum {args.momentum:g}, TI sigma {args.ti:g}, chroma {args.chroma}, "
+              f"momentum {args.momentum:g}, TI sigma {args.ti:g}, chroma {args.chroma}, JND {args.jnd}, "
               f"{args.probes} probes, {took:.1f} s/photo on the RX 6600\n\n"
               f"average change on touched pixels: brightness {luma:.2f}, colour {colour:.2f} (0-255 levels)\n\n"
               + table(rows) + "\n")

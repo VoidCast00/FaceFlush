@@ -47,26 +47,55 @@ def texture_weight_np(img_rgb01: np.ndarray, window: int) -> np.ndarray:
     return np.clip(TEXTURE_FLOOR + (1 - TEXTURE_FLOOR) * std / TEXTURE_FULL, None, 1.0)
 
 
-def apply_crop(x: torch.Tensor, pattern: torch.Tensor, eps: float, mask: torch.Tensor) -> torch.Tensor:
-    """Training-time version on aligned crops. pattern: (3, H, W) in [-1, 1]."""
-    return (x + eps * mask * texture_weight_t(x) * pattern).clamp(0, 1)
+def jnd_t(x: torch.Tensor) -> torch.Tensor:
+    """Just-noticeable brightness change per pixel, in 0-255 levels (classic pixel-domain model).
+
+    x: (N, 3, H, W) RGB in [0, 1] -> (N, 1, H, W). Luminance adaptation (Chou & Li: changes hide
+    better in dark and very bright areas than in mid-grey) combined with contrast masking (Yang et
+    al.: changes hide next to edges and texture), with the usual overlap term (0.3).
+    """
+    lum = 255 * (0.299 * x[:, 0:1] + 0.587 * x[:, 1:2] + 0.114 * x[:, 2:3])
+    k = torch.tensor([1.0, 4.0, 6.0, 4.0, 1.0], device=x.device, dtype=x.dtype) / 16
+    bg = F.conv2d(F.pad(lum, (2, 2, 0, 0), mode="replicate"), k.view(1, 1, 1, 5))
+    bg = F.conv2d(F.pad(bg, (0, 0, 2, 2), mode="replicate"), k.view(1, 1, 5, 1))
+    la = torch.where(bg <= 127, 17 * (1 - torch.sqrt(bg.clamp_min(0) / 127)) + 3, 3 / 128 * (bg - 127) + 3)
+    sobel = torch.tensor([[-1.0, 0, 1], [-2, 0, 2], [-1, 0, 1]], device=x.device, dtype=x.dtype)
+    padded = F.pad(lum, (1, 1, 1, 1), mode="replicate")
+    gx = F.conv2d(padded, sobel.view(1, 1, 3, 3)).abs()
+    gy = F.conv2d(padded, sobel.t().reshape(1, 1, 3, 3)).abs()
+    cm = 0.117 * torch.maximum(gx, gy) / 4  # Sobel / 4 = step height in levels
+    return la + cm - 0.3 * torch.minimum(la, cm)
 
 
-def apply_image(img_bgr: np.ndarray, landmarks: np.ndarray, pattern: np.ndarray, eps: float) -> np.ndarray:
+def apply_crop(x: torch.Tensor, pattern: torch.Tensor, eps: float, mask: torch.Tensor,
+               weight: torch.Tensor | None = None) -> torch.Tensor:
+    """Training-time version on aligned crops. pattern: (3, H, W) in [-1, 1].
+    weight: optional per-pixel strength (1, 1, H, W) replacing the texture weight."""
+    w = texture_weight_t(x) if weight is None else weight
+    return (x + eps * mask * w * pattern).clamp(0, 1)
+
+
+def apply_image(img_bgr: np.ndarray, landmarks: np.ndarray, pattern: np.ndarray, eps: float,
+                weight: np.ndarray | None = None) -> np.ndarray:
     """App-equivalent: warp the canonical pattern onto the face in the full photo and add it.
 
-    pattern: (3, 112, 112) RGB in [-1, 1]. Returns a new uint8 BGR image.
+    pattern: (3, 112, 112) RGB in [-1, 1]. weight: optional canonical (112, 112) strength map that
+    replaces the texture weight (warped along with the pattern). Returns a new uint8 BGR image.
     """
     h, w = img_bgr.shape[:2]
     m = similarity_transform(landmarks, TEMPLATE_112)  # image -> canonical
     flags = cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP
-    layers = np.dstack([pattern.transpose(1, 2, 0), edge_mask()[:, :, None]]).astype(np.float32)
+    mask_c = edge_mask() if weight is None else edge_mask() * weight
+    layers = np.dstack([pattern.transpose(1, 2, 0), mask_c[:, :, None]]).astype(np.float32)
     warped = cv2.warpAffine(layers, m, (w, h), flags=flags, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
     p_rgb, mask = warped[:, :, :3], warped[:, :, 3:4]
+    rgb = img_bgr[:, :, ::-1].astype(np.float32) / 255.0
+    if weight is not None:
+        out = np.clip(rgb + eps * mask * p_rgb, 0, 1)
+        return (out[:, :, ::-1] * 255.0 + 0.5).astype(np.uint8)
 
     scale = np.sqrt(abs(np.linalg.det(m[:, :2])))  # canonical px per image px
     window = max(3, int(round(TEXTURE_WINDOW / scale)) | 1)
-    rgb = img_bgr[:, :, ::-1].astype(np.float32) / 255.0
     weight = texture_weight_np(rgb, window)[:, :, None]
     out = np.clip(rgb + eps * mask * weight * p_rgb, 0, 1)
     return (out[:, :, ::-1] * 255.0 + 0.5).astype(np.uint8)

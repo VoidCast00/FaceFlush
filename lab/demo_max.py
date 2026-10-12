@@ -26,6 +26,7 @@ def main():
     ap.add_argument("--chroma", default="rgb", help="comma list; rgb = no colour limit")
     ap.add_argument("--momentum", type=float, default=0.0)
     ap.add_argument("--ti", type=float, default=0.0)
+    ap.add_argument("--jnd", default="", help="comma list of JND multipliers; one tile each (overrides --chroma columns)")
     ap.add_argument("--out", default="max_demo.jpg")
     args = ap.parse_args()
 
@@ -47,13 +48,15 @@ def main():
 
     tiles = [tile(img, "original")]
     for e in [float(v) for v in args.eps.split(",")]:
-        for c in args.chroma.split(","):
-            chroma = None if c == "rgb" else float(c)
+        variants = ([(None if args.chroma == "rgb" else float(args.chroma), float(j)) for j in args.jnd.split(",")]
+                    if args.jnd else [(None if c == "rgb" else float(c), None) for c in args.chroma.split(",")])
+        for chroma, jnd in variants:
             protect = make_protect(attack, e / 255.0, 150, 8, start, "cuda",
-                                   momentum=args.momentum, ti=args.ti, chroma=chroma)
+                                   momentum=args.momentum, ti=args.ti, chroma=chroma, jnd=jnd)
             out = protect(img.copy(), lm, np.random.default_rng(0))
-            tiles.append(tile(out, f"eps{e:g} " + ("rgb" if chroma is None else f"colour {chroma:g}")))
-    cols = len(args.chroma.split(","))
+            label = f"eps{e:g} " + ("rgb" if chroma is None else f"colour {chroma:g}") + (f" jnd{jnd:g}" if jnd else "")
+            tiles.append(tile(out, label))
+    cols = len(variants)
     blank = np.zeros_like(tiles[0])
     rows = [np.hstack([tiles[0]] + [blank] * (cols - 1))] if cols > 1 else []
     body = tiles[1:] if cols > 1 else tiles
