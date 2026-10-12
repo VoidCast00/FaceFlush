@@ -1,6 +1,8 @@
 """Renders Max privacy on one image at several strengths, for judging how visible it is.
 
-Usage: python demo_max.py image.jpg [--eps 8,12,16] -> $LAB/results/max_demo.jpg
+Usage: python demo_max.py image.jpg [--eps 8,12,16] [--chroma rgb,0,0.3] [--momentum 0.9] [--ti 2]
+        [--out max_demo.jpg] -> $LAB/results/<out>
+One tile per strength and colour setting ("rgb" = no colour limit).
 Use a public-domain picture (e.g. Vermeer), never a photo of a real person from the dataset.
 """
 from __future__ import annotations
@@ -21,6 +23,10 @@ def main():
     ap.add_argument("image")
     ap.add_argument("--eps", default="8,12,16")
     ap.add_argument("--attack", default="sface")
+    ap.add_argument("--chroma", default="rgb", help="comma list; rgb = no colour limit")
+    ap.add_argument("--momentum", type=float, default=0.0)
+    ap.add_argument("--ti", type=float, default=0.0)
+    ap.add_argument("--out", default="max_demo.jpg")
     args = ap.parse_args()
 
     img = cv2.imread(args.image)
@@ -41,10 +47,19 @@ def main():
 
     tiles = [tile(img, "original")]
     for e in [float(v) for v in args.eps.split(",")]:
-        out = make_protect(attack, e / 255.0, 150, 8, start, "cuda")(img.copy(), lm, np.random.default_rng(0))
-        tiles.append(tile(out, f"max eps{e:g}"))
-    cv2.imwrite(str(RESULTS / "max_demo.jpg"), np.hstack(tiles), [cv2.IMWRITE_JPEG_QUALITY, 92])
-    print("wrote", RESULTS / "max_demo.jpg")
+        for c in args.chroma.split(","):
+            chroma = None if c == "rgb" else float(c)
+            protect = make_protect(attack, e / 255.0, 150, 8, start, "cuda",
+                                   momentum=args.momentum, ti=args.ti, chroma=chroma)
+            out = protect(img.copy(), lm, np.random.default_rng(0))
+            tiles.append(tile(out, f"eps{e:g} " + ("rgb" if chroma is None else f"colour {chroma:g}")))
+    cols = len(args.chroma.split(","))
+    blank = np.zeros_like(tiles[0])
+    rows = [np.hstack([tiles[0]] + [blank] * (cols - 1))] if cols > 1 else []
+    body = tiles[1:] if cols > 1 else tiles
+    rows += [np.hstack(body[i:i + cols]) for i in range(0, len(body), cols)] if cols > 1 else [np.hstack(body)]
+    cv2.imwrite(str(RESULTS / args.out), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 92])
+    print("wrote", RESULTS / args.out)
 
 
 if __name__ == "__main__":

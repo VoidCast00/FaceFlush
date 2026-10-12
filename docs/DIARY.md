@@ -254,3 +254,43 @@ Strong preset of the cloak now uses ε16, the strength measured in the lab.
 Video support is dropped from the plan. Processing every frame (and keeping faces tracked between
 frames) would be a project of its own; the effort goes into making photo protection better instead.
 The disabled "Choose a video (coming soon)" button is gone from the home screen.
+
+## 2026-10-12: Literature review and the first transfer tricks
+
+A literature review (via a Perplexity deep search) suggested several ways to make Max privacy carry
+over better to models the phone never sees, and to get rid of the rainbow shimmer:
+
+- **Several different models** instead of SFace alone: the strongest lever in published work.
+- **Momentum (MI-FGSM)** and **translation-invariant gradients (TI)**: cheap optimiser tricks.
+- **Real JPEG during optimisation** (differentiable JPEG with 4:2:0 colour subsampling, e.g. Kornia
+  or NECLA Diff-JPEG).
+- **Colour vs brightness:** the shimmer means the optimiser spends much of its budget on colour,
+  which JPEG throws away first and which is easy to "clean" with a colour blur.
+- Honesty points: services that retrain against a public cloak defeated Fawkes and LowKey (down to
+  about 3% protection); fixed, universal patterns are easy to detect; no paper has tested against
+  PimEyes itself.
+- EdgeFace (BSD-3 code) looked like a good second model, but its weights were trained on WebFace
+  data that is non-commercial only, so it can't ship in a GPL app without the authors' confirmation.
+  Lab use only for now.
+
+`sim_max.py` now has `--momentum`, `--ti` (gradient blur) and `--chroma` (colour share of the
+budget, 0 = brightness only), and `--clean` runs a set of cleaning tricks (JPEG 50, WebP, colour
+halving, colour blur, blur, median, half size) plus an unprotected reference under each.
+
+**Results** (SFace attacked, ArcFace held out, ε8, 150 probes, match rate, lower = better):
+
+| variant | ArcFace | ArcFace after social | SFace | FaceNet | colour / brightness change |
+|---|---|---|---|---|---|
+| before (RGB) | 84.7% | 90.0% | 0.7% | 42% | 3.0 / 3.7 |
+| momentum 0.9 | 85.3% | 91.3% | 0.7% | 43% | 3.0 / 3.7 |
+| TI blur σ2 | 95.3% | 96.0% | – | 63% | 3.5 / 3.6 |
+| momentum + TI | 96.0% | 95.3% | – | 65% | 3.5 / 3.7 |
+| **brightness only** | 88.7% | **87.3%** | 2.7% | – | **0.0** / 4.8 |
+
+- **Momentum** changes nothing with a single model; it should matter more once there are several.
+- **TI makes it worse.** It was designed for large photos of everyday objects; on 112 px faces even
+  σ2 smooths away the fine detail that does the work.
+- **Brightness only is the surprise:** no colour change at all (so no rainbow shimmer possible),
+  slightly weaker on the original file, slightly *better* after social-media compression, and
+  the same overall PSNR. The rest of the colour sweep (0.3, 0.6, 1.0), the cleaning tests and a
+  visual comparison are still running.

@@ -44,11 +44,51 @@ def social(img: np.ndarray) -> np.ndarray:
     return jpeg(small, 80)
 
 
+def webp(img: np.ndarray, q: int) -> np.ndarray:
+    ok, buf = cv2.imencode(".webp", img, [cv2.IMWRITE_WEBP_QUALITY, q])
+    return cv2.imdecode(buf, cv2.IMREAD_COLOR)
+
+
+def chroma_420(img: np.ndarray) -> np.ndarray:
+    """Only JPEG's colour step: halve the colour resolution and scale it back up, no quantisation.
+    If this alone undoes a cloak, the cloak relied on fine colour detail that any JPEG removes."""
+    ycc = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    h, w = img.shape[:2]
+    for c in (1, 2):
+        small = cv2.resize(ycc[:, :, c], (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+        ycc[:, :, c] = cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
+    return cv2.cvtColor(ycc, cv2.COLOR_YCrCb2BGR)
+
+
+def colour_blur(img: np.ndarray, sigma: float = 2.0) -> np.ndarray:
+    """Blurs only the colour, keeps brightness: barely visible, cheap cloak 'cleaning'."""
+    ycc = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    for c in (1, 2):
+        ycc[:, :, c] = cv2.GaussianBlur(ycc[:, :, c], (0, 0), sigma)
+    return cv2.cvtColor(ycc, cv2.COLOR_YCrCb2BGR)
+
+
+def half(img: np.ndarray) -> np.ndarray:
+    h, w = img.shape[:2]
+    small = cv2.resize(img, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+    return cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
+
+
 POSTS: dict[str, Callable[[np.ndarray], np.ndarray]] = {
     "none": lambda img: img,
     "jpeg75": lambda img: jpeg(img, 75),
     "social": social,
+    # Cleaning attempts an attacker could run (the "--clean" set in sim_max.py)
+    "jpeg50": lambda img: jpeg(img, 50),
+    "webp75": lambda img: webp(img, 75),
+    "chroma420": chroma_420,
+    "colourblur": colour_blur,
+    "blur1": lambda img: cv2.GaussianBlur(img, (0, 0), 1.0),
+    "median3": lambda img: cv2.medianBlur(img, 3),
+    "half": half,
 }
+DEFAULT_POSTS = ["none", "jpeg75", "social"]
+CLEAN_POSTS = list(POSTS)
 
 
 def to_tensor(crops_bgr: list[np.ndarray], device: str) -> torch.Tensor:
@@ -115,7 +155,7 @@ class Bench:
             sims = embed(m, clean_probe, device) @ self.gallery[n].T
             self.thresholds[n] = float(torch.quantile(sims[impostor].float()[:2_000_000], 1 - FAR))
 
-    def run(self, method: str, protect: Protect, posts: list[str] = list(POSTS), seed: int = 0) -> list[Row]:
+    def run(self, method: str, protect: Protect, posts: list[str] = DEFAULT_POSTS, seed: int = 0) -> list[Row]:
         rng = np.random.default_rng(seed)
         crops: dict[str, list] = {p: [] for p in posts}
         found: dict[str, list] = {p: [] for p in posts}
