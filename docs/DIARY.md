@@ -354,3 +354,40 @@ A second review looked for face recognition models whose weights may legally go 
    one to two days on the lab PC.
 3. Ship that small model next to SFace, with its origin documented. CC BY-SA "share-alike" likely
    carries over to the trained weights, which is compatible with GPL-3.0 but needs proper credit.
+
+## 2026-10-12: Stronger settings, brightness only vs. colour
+
+The same per-photo simulation (SFace attacked, ArcFace held out, 150 photos, 150 steps × 8
+transforms), now at higher visibility limits. Match rate of ArcFace, the model the cloak never saw
+(lower is better), on the original file and after the social-media simulation:
+
+| strength | with colour | with colour, after social | brightness only | brightness only, after social | PSNR |
+|---|---|---|---|---|---|
+| ε8 | 84.7% | 90.0% | 88.7% | 87.3% | 39.5 |
+| ε16 | 30.7% | 39.3% | **24.0%** | **14.0%** | 34.4 |
+| ε20 | 26.7% | 29.3% | **9.3%** | **4.0%** | 32.8 |
+| ε24 | 15.3% | 18.0% | **5.3%** | **3.3%** | 31.6 |
+
+SFace and FaceNet stay at 0–1.3% for every brightness-only run from ε16 up.
+
+- **From ε16 up, brightness only is far stronger than colour**, with the same PSNR. At ε8 the two
+  were level; at ε20 brightness only lets through a third as many matches.
+- **Compression helps it instead of hurting it.** With colour, JPEG and the social-media chain
+  undo part of the protection (30.7% → 39.3% at ε16). Brightness only gets *better* after them
+  (24.0% → 14.0%). JPEG keeps brightness detail and throws colour detail away, so a brightness
+  pattern is what is left after upload anyway.
+- This is the first setting that gets ArcFace below 10% after social-media compression.
+
+The catch is visibility. None of these strengths are invisible:
+
+![Max privacy at ε16, 20 and 24: with colour (left) and brightness only (right)](img/max_demo_strong.jpg)
+
+With colour, the face is covered in pastel rainbow blotches. Brightness only has no rainbow, but
+leaves brownish, maze-like smudges on the cheeks and forehead (like dirt or face paint) and dark
+swirls in the background. At ε16 it already reads as "something was done to this photo", and at
+ε24 it is obvious. So these are "visible protection" settings: fine for someone who cares more about
+privacy than looks, not for a photo that should look untouched.
+
+**Decision:** brightness only replaces colour for Max privacy at every strength. The next test (JND
+limits, running now) tries to keep the strength of ε16–24 while moving the change off smooth skin,
+where it shows most, into edges, texture and dark areas, where the eye misses it.
