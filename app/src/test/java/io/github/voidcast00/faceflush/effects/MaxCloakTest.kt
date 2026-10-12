@@ -38,10 +38,21 @@ class MaxCloakTest {
 
         assertEquals(81, model.calls) // reference embeddings + 40 steps x 2 transforms
         assertEquals(0f, model.epsSeen.first()) // references come from the clean face
-        // Fixed-size signed steps (10 / 40 = 0.25) settle within one step of the goal
-        assertEquals(0.8f, field.sample(0, 50.0, 50.0), 0.26f)
-        assertEquals(-0.5f, field.sample(1, 50.0, 50.0), 0.26f)
-        assertEquals(-0.5f, field.sample(2, 50.0, 50.0), 0.26f)
+        // Brightness only: all channels move together, towards the average goal (0.8 - 0.5 - 0.5) / 3.
+        // Fixed-size signed steps (10 / 40 = 0.25) settle within one step of it
+        val goal = (0.8f - 0.5f - 0.5f) / 3
+        for (c in 0 until 3) assertEquals(goal, field.sample(c, 50.0, 50.0), 0.26f)
+        assertEquals(field.sample(0, 50.0, 50.0), field.sample(1, 50.0, 50.0), 0f)
+        assertEquals(field.sample(0, 50.0, 50.0), field.sample(2, 50.0, 50.0), 0f)
+    }
+
+    @Test
+    fun warmStartUsesTheQuickCloaksBrightness() {
+        val n = CanonicalFace.SIZE
+        val start = CanonicalField(3, n, FloatArray(3 * n * n) { if (it < n * n) 0.9f else 0f }) // red only
+        val model = FakeModel(FloatArray(n * n * 3))
+        val field = MaxCloak(model).optimise(image(), lm, 8f / 255f, steps = 0, start = start, seed = 1)
+        for (c in 0 until 3) assertEquals(0.3f, field.sample(c, 50.0, 50.0), 1e-5f)
     }
 
     @Test

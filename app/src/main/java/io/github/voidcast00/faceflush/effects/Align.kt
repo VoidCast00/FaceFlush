@@ -91,6 +91,20 @@ class CanonicalField(val channels: Int, val size: Int, private val data: FloatAr
         return top * (1 - fy) + bottom * fy
     }
 
+    /** A 3-channel (RGB) pattern reduced to brightness only: every channel becomes their average. */
+    fun brightnessOnly(): CanonicalField {
+        require(channels == 3)
+        val n = size * size
+        val out = FloatArray(data.size)
+        for (i in 0 until n) {
+            val v = (data[i] + data[n + i] + data[2 * n + i]) / 3
+            out[i] = v
+            out[n + i] = v
+            out[2 * n + i] = v
+        }
+        return CanonicalField(3, size, out)
+    }
+
     /** Writes the field in the same format [read] expects. */
     fun write(output: java.io.OutputStream) {
         val bb = java.nio.ByteBuffer.allocate(16 + data.size * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)

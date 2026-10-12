@@ -117,7 +117,8 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             Log.w(TAG, "Missing asset $name", e)
             null
         }
-        InvisibleAssets(cloak = load("cloak_pattern.bin"), morph = load("morph_field.bin"))
+        // Brightness only, like Max privacy: no rainbow shimmer at higher strengths
+        InvisibleAssets(cloak = load("cloak_pattern.bin")?.brightnessOnly(), morph = load("morph_field.bin"))
     }
 
     init {
@@ -139,7 +140,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             _events.trySend(EditorEvent.Message(R.string.max_no_faces))
             return
         }
-        val eps = (s.params[Params.VISIBILITY] ?: 8f) / 255f
+        val eps = (s.params[Params.VISIBILITY] ?: 16f) / 255f
         _state.update { it.copy(max = MaxState(running = true)) }
         viewModelScope.launch {
             // The job works on a copy of the photo at detection size, so it survives the app closing

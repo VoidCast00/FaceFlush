@@ -17,7 +17,8 @@ Pick a photo, choose a technique, adjust the strength, then save or share the re
   faces (see [docs/DIARY.md](docs/DIARY.md))
 - **Dead pixels & noise**: stuck pixels, colour noise and scanlines (weakest on its own)
 - **Feature bars**: bars across the eyes, nose and mouth that break face detectors
-- **Invisible cloak** (in development): a faint trained pattern plus a tiny face-shape change
+- **Invisible cloak** (in development): trained brightness changes, optimised per face by Max privacy
+  (visible smudges at the default strength; see [docs/DIARY.md](docs/DIARY.md))
 
 Faces are found on-device with OpenCV's [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
 detector, or Android's built-in detector as a lightweight fallback. You can skip detected faces or draw your own areas.

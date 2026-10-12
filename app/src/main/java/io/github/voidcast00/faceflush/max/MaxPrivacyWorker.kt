@@ -42,7 +42,7 @@ class MaxPrivacyWorker(context: Context, params: WorkerParameters) : CoroutineWo
 
     override suspend fun doWork(): Result {
         val lms = inputData.getFloatArray(KEY_LANDMARKS) ?: return Result.failure()
-        val eps = inputData.getFloat(KEY_EPS, 8f / 255f)
+        val eps = inputData.getFloat(KEY_EPS, 16f / 255f)
         val seed = inputData.getLong(KEY_SEED, 0L)
         val faceCount = lms.size / 10
         val total = faceCount * STEPS

@@ -420,3 +420,14 @@ only, with ε24 as the overall cap. Match rates (lower is better), next to plain
 **Decision:** the JND limit as built is not a win; plain brightness only stays the best trade-off.
 A possible second try: keep only the texture/edge part of the formula, cap dark areas at the
 mid-tone allowance, and fade the pattern out over the background next to the face.
+
+## 2026-10-12: Brightness only goes into the app
+
+- **Max privacy** now only changes brightness: red, green and blue move together, and each step
+  follows the sum of the three gradients (the same as the lab's `--chroma 0`). The recognition
+  model on the phone is unchanged, so no new model file was needed.
+- **The quick cloak** is shown as brightness only too (its three colour channels averaged), so the
+  preview no longer has a rainbow tint at higher strengths. It barely worked before and still does.
+- **Strengths:** Light 8, Medium 16 (the default), Strong 24; the slider now goes up to 24.
+- The in-app explanation now gives the new numbers (strong AI never seen: about 87 in 100 at 8,
+  14 to 24 at 16, 3 to 5 at 24), and says that the default leaves visible smudges.

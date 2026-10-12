@@ -162,17 +162,18 @@ enum class Technique(
         listOf(RegionMode.FACES, RegionMode.MANUAL), RegionMode.FACES,
         listOf(
             // Cloak strength in 1/255 steps; 0 turns the cloak off
-            ParamSpec(Params.VISIBILITY, R.string.param_visibility, 0f, 16f),
+            ParamSpec(Params.VISIBILITY, R.string.param_visibility, 0f, 24f),
             // Kept for those who want it, but off by default: the lab found it barely works
             // (strong AI still matched 97% at 1.0) while visibly changing the face
             ParamSpec(Params.MORPH, R.string.param_morph, 0f, 1.5f, 0.1f),
         ),
         defaults = mapOf(Params.MORPH to 0f),
-        // 8 and 16 are the strengths measured in the lab (see docs/DIARY.md)
+        // All three are strengths measured in the lab (see docs/DIARY.md). Medium is the default:
+        // from 16 up Max privacy also fools a strong AI it never saw, at the cost of visible smudges
         presets = mapOf(
-            Strength.LIGHT to mapOf(Params.VISIBILITY to 4f),
-            Strength.MEDIUM to mapOf(Params.VISIBILITY to 8f),
-            Strength.STRONG to mapOf(Params.VISIBILITY to 16f),
+            Strength.LIGHT to mapOf(Params.VISIBILITY to 8f),
+            Strength.MEDIUM to mapOf(Params.VISIBILITY to 16f),
+            Strength.STRONG to mapOf(Params.VISIBILITY to 24f),
         ),
     );
 
