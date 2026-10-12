@@ -292,5 +292,65 @@ halving, colour blur, blur, median, half size) plus an unprotected reference und
   σ2 smooths away the fine detail that does the work.
 - **Brightness only is the surprise:** no colour change at all (so no rainbow shimmer possible),
   slightly weaker on the original file, slightly *better* after social-media compression, and
-  the same overall PSNR. The rest of the colour sweep (0.3, 0.6, 1.0), the cleaning tests and a
-  visual comparison are still running.
+  the same overall PSNR.
+
+**Colour sweep** (same setup; colour = share of the budget colour may use):
+
+| colour share | ArcFace | ArcFace after social | SFace | colour / brightness change |
+|---|---|---|---|---|
+| 0 (brightness only) | 88.7% | 87.3% | 2.7% | 0.0 / 4.8 |
+| 0.3 | 89.3% | 88.7% | 3.3% | 0.75 / 4.4 |
+| 0.6 | 88.7% | 89.3% | 0.7% | 1.3 / 4.1 |
+| 1.0 | 86.0% | 90.0% | 0.7% | 2.0 / 3.8 |
+| unlimited RGB (before) | 84.7% | 90.0% | 0.7% | 3.0 / 3.7 |
+
+Colour buys nothing that survives compression: all variants are within a few points after social.
+It only changes what the noise looks like:
+
+![Max privacy at ε8, 12 and 16: unlimited colour, brightness only, colour 0.3 and 0.6](img/max_demo_colour.jpg)
+
+Unlimited colour gives the pastel rainbow shimmer. Brightness only has no rainbow, but leaves faint
+grey hatching on smooth skin and dark swirls in the background (barely visible at ε8, clear at ε16).
+**Decision:** brightness only becomes the default; the next step is to move that remaining change
+away from smooth skin (see JND below).
+
+**Cleaning tests** (today's RGB cloak, ε8; match rate against SFace, the attacked model):
+
+| cleaning | none | colour halving | colour blur | blur | median | half size | JPEG 50 | WebP 75 |
+|---|---|---|---|---|---|---|---|---|
+| SFace | 0.7% | 0.7% | 2.0% | 2.0% | 0.7% | 1.3% | 2.7% | 5.3% |
+
+None of these hurt unprotected photos (97–99% still match), so a service could afford any of them,
+and the cloak survives all of them. ArcFace stays at 82–93% whatever is done, because it was never
+fooled much in the first place: transfer, not robustness, is the weak point.
+
+## 2026-10-12: Which models may ship, and the HyperFace idea
+
+A second review looked for face recognition models whose weights may legally go into a GPL app:
+
+- **No small, accurate, licence-clean model exists.** Small models (MobileFaceNet variants, EdgeFace,
+  Qualcomm's) were trained on MS1M, WebFace or similar collections that are non-commercial. Most
+  synthetic face datasets are non-commercial too, directly (DigiFace-1M, FaceSynthetics) or through
+  the generator they were made with (SynFace, DCFace, IDiff-Face, GANDiffFace).
+- **SFace** (the model the app ships): the weights are explicitly Apache-2.0, which is fine for GPL,
+  but OpenCV does not say which photos it was trained on. A `MODEL-LICENSES.md` should state exactly
+  that, without guessing.
+- **HyperFace** (Idiap) is the one clean candidate: MIT-licensed weights, trained only on synthetic
+  identities (dataset CC BY-SA 4.0). But the released model is an IResNet-50: a 390 MB checkpoint
+  (about 175 MB as a plain model, 87 MB at half precision) and roughly 25× the compute of SFace. On
+  the phone that would turn about 5 minutes per face into one to two hours, so size is not the real
+  problem, speed is.
+- **JND masks** (just-noticeable difference): a cheap classic formula for how much brightness change
+  the eye misses at each pixel (more in very dark or bright areas and texture, less on smooth skin).
+  No one has tested it on face cloaks, so it is our own experiment next.
+
+**The HyperFace idea, step by step:**
+
+1. **Free test first:** run Max privacy in the lab with SFace + HyperFace together (the PC does not
+   care about speed) and see whether ArcFace's match rate drops. If it barely moves, a second model
+   is not worth the effort.
+2. **If it helps:** train a small model (MobileFaceNet size) to copy HyperFace's answers on the
+   HyperFace dataset ("distillation"). Estimated at a few hours on a rented A100 (roughly $5–20) or
+   one to two days on the lab PC.
+3. Ship that small model next to SFace, with its origin documented. CC BY-SA "share-alike" likely
+   carries over to the trained weights, which is compatible with GPL-3.0 but needs proper credit.
