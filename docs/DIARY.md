@@ -391,3 +391,32 @@ privacy than looks, not for a photo that should look untouched.
 **Decision:** brightness only replaces colour for Max privacy at every strength. The next test (JND
 limits, running now) tries to keep the strength of ε16–24 while moving the change off smooth skin,
 where it shows most, into edges, texture and dark areas, where the eye misses it.
+
+## 2026-10-12: JND limits (first try: no gain)
+
+The idea: instead of one limit for every pixel, let each pixel change only by a set number of
+"just-noticeable differences" (JND), computed from the clean photo with a classic formula. Smooth
+mid-tone skin gets little room (about 4 levels), dark areas, edges and texture get more. Brightness
+only, with ε24 as the overall cap. Match rates (lower is better), next to plain brightness only:
+
+| setting | ArcFace | ArcFace after social | SFace | FaceNet | brightness change | PSNR |
+|---|---|---|---|---|---|---|
+| JND 1× | 94.0% | 95.3% | 13.3% | 60.7% | 4.6 | 39.7 |
+| JND 1.5× | 78.0% | 76.7% | 0.7% | 16.7% | 6.5 | 36.5 |
+| JND 2× | 41.3% | 37.3% | 0.7% | 3.3% | 8.0 | 34.6 |
+| plain brightness only, ε16 (for comparison) | 24.0% | 14.0% | 0.7% | 1.3% | 8.5 | 34.3 |
+
+![JND 1×, 1.5× and 2× (brightness only, capped at ε24)](img/max_demo_jnd.jpg)
+
+- **Less protection for the same amount of change.** JND 2× changes the photo as much as plain
+  ε16, yet lets through more than twice as many ArcFace matches (37% vs. 14% after social).
+- **The change moved, but to the wrong place.** The formula allows far more change in dark areas
+  (up to about 20 levels in near-black), so the optimiser pours its effort into the dark background
+  and draws ghostly eye-like shapes and swirls there, which are easy to spot. Skin is cleaner at 1×,
+  but at 1× the cloak barely works.
+- The classic formula was made for video coding on old displays; its generous allowance for dark
+  areas does not match how a phone screen shows a dark background.
+
+**Decision:** the JND limit as built is not a win; plain brightness only stays the best trade-off.
+A possible second try: keep only the texture/edge part of the formula, cap dark areas at the
+mid-tone allowance, and fade the pattern out over the background next to the face.
