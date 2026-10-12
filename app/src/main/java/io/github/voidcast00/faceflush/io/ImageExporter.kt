@@ -25,9 +25,9 @@ object ImageExporter {
 
     fun mimeType(png: Boolean) = if (png) "image/png" else "image/jpeg"
 
-    private fun fileName(png: Boolean): String {
+    private fun fileName(png: Boolean, suffix: String = ""): String {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        return "FaceFlush_$stamp.${if (png) "png" else "jpg"}"
+        return "FaceFlush_$stamp$suffix.${if (png) "png" else "jpg"}"
     }
 
     private fun Bitmap.writeTo(out: OutputStream, png: Boolean) {
@@ -37,10 +37,17 @@ object ImageExporter {
     }
 
     /** Saves to Pictures/FaceFlush. Needs no storage permission on Android 10+. */
-    fun saveToGallery(context: Context, bitmap: Bitmap, png: Boolean): Uri {
+    fun saveToGallery(context: Context, bitmap: Bitmap, png: Boolean): Uri =
+        insert(context, fileName(png), png) { bitmap.writeTo(it, png) }
+
+    /** Saves an already encoded file (for example one cleaned by [MetadataCleaner]) to Pictures/FaceFlush. */
+    fun saveCopy(context: Context, bytes: ByteArray, png: Boolean, index: Int): Uri =
+        insert(context, fileName(png, "_clean_${index + 1}"), png) { it.write(bytes) }
+
+    private fun insert(context: Context, name: String, png: Boolean, write: (OutputStream) -> Unit): Uri {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, fileName(png))
+            put(MediaStore.Images.Media.DISPLAY_NAME, name)
             put(MediaStore.Images.Media.MIME_TYPE, mimeType(png))
             put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$ALBUM")
             put(MediaStore.Images.Media.IS_PENDING, 1)
@@ -48,7 +55,7 @@ object ImageExporter {
         val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val uri = resolver.insert(collection, values) ?: throw IOException("Could not create gallery entry")
         try {
-            resolver.openOutputStream(uri)?.use { bitmap.writeTo(it, png) }
+            resolver.openOutputStream(uri)?.use(write)
                 ?: throw IOException("Could not open gallery entry")
             values.clear()
             values.put(MediaStore.Images.Media.IS_PENDING, 0)

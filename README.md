@@ -21,6 +21,9 @@ Pick a photo, choose a technique, adjust the strength, then save or share the re
   face by Max privacy (visible smudges at the default strength; see [docs/DIARY.md](docs/DIARY.md)). Rainbow
   style and face shape change are "fun extras" that change the look but add no protection.
 
+**Remove metadata only** saves clean copies of photos (location, camera, date, comments, thumbnails,
+motion-photo video removed) without re-compressing JPEG or PNG, so the picture stays exactly the same.
+
 Faces are found on-device with OpenCV's [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
 detector, or Android's built-in detector as a lightweight fallback. You can skip detected faces or draw your own areas.
 

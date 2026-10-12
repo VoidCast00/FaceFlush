@@ -12,6 +12,34 @@
     <string name="mode_visible_body">Pixelate, blur, mask… obvious, and the most reliable.</string>
     <string name="mode_invisible_title">Protect invisibly</string>
     <string name="mode_invisible_body">Tiny brightness changes that confuse face recognition AI.</string>
+    <string name="mode_clean_title">Remove metadata only</string>
+    <string name="mode_clean_body">Strip location, camera and date from photos. The picture itself stays exactly the same.</string>
+
+    <!-- Remove metadata -->
+    <string name="clean_working">Cleaning %1$d of %2$d…</string>
+    <string name="clean_done_title">Metadata removed</string>
+    <plurals name="clean_saved">
+        <item quantity="one">%d clean copy saved to Pictures/FaceFlush.</item>
+        <item quantity="other">%d clean copies saved to Pictures/FaceFlush.</item>
+    </plurals>
+    <plurals name="clean_failed">
+        <item quantity="one">%d photo could not be read.</item>
+        <item quantity="other">%d photos could not be read.</item>
+    </plurals>
+    <plurals name="clean_converted">
+        <item quantity="one">%d photo was not JPEG or PNG, so it was saved as a new JPEG.</item>
+        <item quantity="other">%d photos were not JPEG or PNG, so they were saved as new JPEGs.</item>
+    </plurals>
+    <string name="clean_found_title">Found and removed</string>
+    <string name="clean_found_none">No hidden data found. The copies are clean either way.</string>
+    <string name="found_location">Location (GPS)</string>
+    <string name="found_camera">Camera make and model</string>
+    <string name="found_date">Date and time taken</string>
+    <string name="found_text">Descriptions, comments and editing history</string>
+    <string name="found_extra">Hidden extras: preview thumbnail, motion-photo video or extra images</string>
+    <string name="found_other">Other camera data (settings, lens, maker notes)</string>
+    <string name="clean_location_note">Android hides the location from apps, so it may not show up above. The new copies contain none either way.</string>
+    <string name="clean_originals_note">Your originals are unchanged. Share the new copies, or delete the originals in your gallery.</string>
     <string name="home_privacy">Everything happens on your phone. FaceFlush has no internet access, and the photos it saves contain no location or camera data.</string>
 
     <!-- Editor -->

@@ -42,8 +42,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun FaceFlushApp(onShare: (EditorEvent.Share) -> Unit, vm: EditorViewModel = viewModel()) {
+private fun FaceFlushApp(
+    onShare: (EditorEvent.Share) -> Unit,
+    vm: EditorViewModel = viewModel(),
+    metadata: MetadataViewModel = viewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val cleanState by metadata.state.collectAsStateWithLifecycle()
+    val pickToClean = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        metadata.clean(uris)
+    }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(vm::open)
     }
@@ -56,6 +64,14 @@ private fun FaceFlushApp(onShare: (EditorEvent.Share) -> Unit, vm: EditorViewMod
         BackHandler(onBack = vm::close)
         EditorScreen(state = state, vm = vm, onShare = onShare)
     } else {
-        HomeScreen(onPickPhoto = pick, events = vm.events)
+        HomeScreen(
+            onPickPhoto = pick,
+            onCleanMetadata = {
+                pickToClean.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+            cleanState = cleanState,
+            onCleanDone = metadata::dismiss,
+            events = vm.events,
+        )
     }
 }

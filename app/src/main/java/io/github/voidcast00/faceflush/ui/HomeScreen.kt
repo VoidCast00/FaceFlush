@@ -21,6 +21,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.voidcast00.faceflush.CleanState
 import io.github.voidcast00.faceflush.EditorEvent
 import io.github.voidcast00.faceflush.R
 import io.github.voidcast00.faceflush.effects.EditorMode
@@ -45,7 +47,13 @@ import io.github.voidcast00.faceflush.ui.theme.SectionLabel
 import kotlinx.coroutines.flow.Flow
 
 @Composable
-fun HomeScreen(onPickPhoto: (EditorMode) -> Unit, events: Flow<EditorEvent>) {
+fun HomeScreen(
+    onPickPhoto: (EditorMode) -> Unit,
+    onCleanMetadata: () -> Unit,
+    cleanState: CleanState,
+    onCleanDone: () -> Unit,
+    events: Flow<EditorEvent>,
+) {
     val snackbar = remember { SnackbarHostState() }
     CollectMessages(events, snackbar)
     val colors = MaterialTheme.colorScheme
@@ -89,6 +97,12 @@ fun HomeScreen(onPickPhoto: (EditorMode) -> Unit, events: Flow<EditorEvent>) {
                         Icons.Outlined.Shield, R.string.mode_invisible_title, R.string.mode_invisible_body,
                         highlighted = false,
                     ) { onPickPhoto(EditorMode.INVISIBLE) }
+                    Spacer(Modifier.height(12.dp))
+                    ModeCard(
+                        Icons.Outlined.CleaningServices, R.string.mode_clean_title, R.string.mode_clean_body,
+                        highlighted = false,
+                        onClick = onCleanMetadata,
+                    )
                     Spacer(Modifier.height(28.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         listOf(R.string.badge_offline, R.string.badge_no_metadata, R.string.badge_on_device).forEach {
@@ -99,6 +113,7 @@ fun HomeScreen(onPickPhoto: (EditorMode) -> Unit, events: Flow<EditorEvent>) {
             }
         }
     }
+    CleanSheet(cleanState, onCleanDone)
 }
 
 /** One of the two ways into the editor; tapping it opens the photo picker. */

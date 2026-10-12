@@ -450,3 +450,21 @@ without picking the photo again.
   the technique cards, scans while faces are being found, fills up with glitch as Max privacy
   progresses (fully "flushed" at 100%), heads the explainer and the invisible half, and sweeps
   across the Save button while saving.
+
+## 2026-10-12: Remove metadata only
+
+A third option on the start screen saves clean copies of one or more photos without touching the
+faces:
+
+- **JPEG and PNG are cleaned without re-compressing**, so the picture stays bit-for-bit the same.
+  Removed: EXIF (location, camera, date, settings, the preview thumbnail, which can show the uncropped
+  original), XMP, IPTC, comments, PNG text and time chunks, and anything hidden after the end of
+  the image (motion-photo video, extra pictures). Kept: the image data, its colour profile and the
+  rotation, written back as a tiny EXIF block holding nothing else.
+- **Other formats** (HEIC, WebP…) are decoded and saved as a new JPEG, which has no metadata at all.
+- A summary lists what was found and removed. Android hides the location from apps, so it may not be
+  listed even when the original has one; the copies contain none either way. Originals stay as they
+  are.
+
+Tested on generated photos full of fake metadata (GPS, camera, date, comment, XMP, a fake motion
+video at the end): every trace is gone, and the decoded pixels are identical to the original.
