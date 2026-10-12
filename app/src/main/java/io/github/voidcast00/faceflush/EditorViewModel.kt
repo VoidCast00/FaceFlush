@@ -17,6 +17,7 @@ import io.github.voidcast00.faceflush.effects.CanonicalField
 import io.github.voidcast00.faceflush.effects.FacePattern
 import io.github.voidcast00.faceflush.effects.Landmarks
 import io.github.voidcast00.faceflush.effects.InvisibleAssets
+import io.github.voidcast00.faceflush.effects.EditorMode
 import io.github.voidcast00.faceflush.effects.EffectRenderer
 import io.github.voidcast00.faceflush.effects.Params
 import io.github.voidcast00.faceflush.effects.PixelBuffer
@@ -64,6 +65,7 @@ data class EditorState(
     val sourceHeight: Int = 0,
     val faces: List<FaceItem> = emptyList(),
     val manualBoxes: List<Box> = emptyList(),
+    val mode: EditorMode = EditorMode.VISIBLE,
     val technique: Technique = Technique.PIXELATE,
     val regionMode: RegionMode = Technique.PIXELATE.defaultRegion,
     /** Null once the user has moved a slider by hand. */
@@ -117,8 +119,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             Log.w(TAG, "Missing asset $name", e)
             null
         }
-        // Brightness only, like Max privacy: no rainbow shimmer at higher strengths
-        InvisibleAssets(cloak = load("cloak_pattern.bin")?.brightnessOnly(), morph = load("morph_field.bin"))
+        InvisibleAssets(cloak = load("cloak_pattern.bin"), morph = load("morph_field.bin"))
     }
 
     init {
@@ -141,6 +142,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val eps = (s.params[Params.VISIBILITY] ?: 16f) / 255f
+        val rainbow = (s.params[Params.RAINBOW] ?: 0f) >= 1f
         _state.update { it.copy(max = MaxState(running = true)) }
         viewModelScope.launch {
             // The job works on a copy of the photo at detection size, so it survives the app closing
@@ -162,7 +164,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                 .apply()
             val landmarks = faces.map { (it.value.face.landmarks ?: Landmarks.estimate(it.value.face.box)).scaled(scale) }
             val request = OneTimeWorkRequestBuilder<MaxPrivacyWorker>()
-                .setInputData(MaxPrivacyWorker.inputData(landmarks, eps, seed))
+                .setInputData(MaxPrivacyWorker.inputData(landmarks, eps, rainbow, seed))
                 .build()
             work.enqueueUniqueWork(MaxPrivacyWorker.WORK_NAME, ExistingWorkPolicy.REPLACE, request)
         }
@@ -187,7 +189,8 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                 if (prefs.getString(KEY_MAX_DONE, null) == info.id.toString()) return
                 val count = info.outputData.getInt(MaxPrivacyWorker.KEY_FACES, 0)
                 val eps = info.outputData.getFloat(MaxPrivacyWorker.KEY_EPS, 0f)
-                viewModelScope.launch { applyMaxResults(info.id.toString(), count, eps) }
+                val rainbow = info.outputData.getBoolean(MaxPrivacyWorker.KEY_RAINBOW, false)
+                viewModelScope.launch { applyMaxResults(info.id.toString(), count, eps, rainbow) }
             }
             WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
                 val wasRunning = _state.value.max.running
@@ -200,7 +203,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Puts finished Max privacy patterns on their faces, reopening the photo if the app was closed. */
-    private suspend fun applyMaxResults(id: String, count: Int, eps: Float) {
+    private suspend fun applyMaxResults(id: String, count: Int, eps: Float, rainbow: Boolean) {
         val fields = withContext(Dispatchers.IO) { MaxPrivacyWorker.readResults(getApplication(), count) } ?: return
         val jobUri = prefs.getString(KEY_MAX_URI, null)?.let(Uri::parse) ?: return
         if (source == null && !_state.value.loading) open(jobUri)
@@ -211,9 +214,10 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         if (source == null || sourceUri != jobUri) return
         val byFace = maxFaces.zip(fields).toMap()
         updateAndRender { s ->
-            val faces = s.faces.mapIndexed { i, f -> byFace[i]?.let { f.copy(pattern = FacePattern(it, eps)) } ?: f }
+            val faces = s.faces.mapIndexed { i, f -> byFace[i]?.let { f.copy(pattern = FacePattern(it, eps, rainbow)) } ?: f }
             s.copy(
                 faces = faces,
+                mode = EditorMode.INVISIBLE,
                 technique = Technique.INVISIBLE,
                 regionMode = RegionMode.FACES,
                 params = if (s.technique == Technique.INVISIBLE) s.params else Technique.INVISIBLE.paramsFor(Strength.MEDIUM),
@@ -275,6 +279,14 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                 manualBoxes = emptyList(), detecting = false, exporting = false,
             )
         }
+    }
+
+    /** Switches between hiding faces visibly and the invisible cloak, keeping the photo. */
+    fun setMode(mode: EditorMode) {
+        if (_state.value.mode == mode) return
+        val technique = if (mode == EditorMode.INVISIBLE) Technique.INVISIBLE else Technique.PIXELATE
+        selectTechnique(technique)
+        _state.update { it.copy(mode = mode) }
     }
 
     fun selectTechnique(technique: Technique) = updateAndRender {

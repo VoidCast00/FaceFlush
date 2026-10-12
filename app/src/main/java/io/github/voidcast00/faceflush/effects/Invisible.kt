@@ -11,10 +11,15 @@ import kotlin.math.sqrt
  * The trained patterns behind the "Invisible" technique, made in the lab (see lab/README.md).
  * [cloak]: 3 channels (RGB) in [-1, 1]. [morph]: 2 channels, displacement in canonical pixels.
  */
-class InvisibleAssets(val cloak: CanonicalField?, val morph: CanonicalField?)
+class InvisibleAssets(val cloak: CanonicalField?, val morph: CanonicalField?) {
+    /** The cloak as it is normally shown: brightness only, like Max privacy (no rainbow tint). */
+    val brightCloak: CanonicalField? by lazy { cloak?.brightnessOnly() }
 
-/** A cloak optimised for one particular face by "Max privacy", and the strength it was made for. */
-class FacePattern(val field: CanonicalField, val eps: Float)
+    fun cloakFor(rainbow: Boolean) = if (rainbow) cloak else brightCloak
+}
+
+/** A cloak optimised for one particular face by "Max privacy", the strength and style it was made for. */
+class FacePattern(val field: CanonicalField, val eps: Float, val rainbow: Boolean = false)
 
 // Must match lab/faceflush_lab/cloak.py
 private const val EDGE_FEATHER = 10.0

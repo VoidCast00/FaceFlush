@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BlurOn
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Download
@@ -39,7 +40,7 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +59,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -83,6 +85,7 @@ import io.github.voidcast00.faceflush.EditorState
 import io.github.voidcast00.faceflush.EditorViewModel
 import io.github.voidcast00.faceflush.R
 import io.github.voidcast00.faceflush.detect.DetectorKind
+import io.github.voidcast00.faceflush.effects.EditorMode
 import io.github.voidcast00.faceflush.effects.ParamSpec
 import io.github.voidcast00.faceflush.effects.Params
 import io.github.voidcast00.faceflush.effects.RegionMode
@@ -142,7 +145,10 @@ fun EditorScreen(state: EditorState, vm: EditorViewModel, onShare: (EditorEvent.
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
-                actions = { DetectorMenu(state.detector, vm::setDetector) },
+                actions = {
+                    ModeSwitch(state.mode) { vm.setMode(it) }
+                    DetectorMenu(state.detector, vm::setDetector)
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
@@ -163,7 +169,13 @@ fun EditorScreen(state: EditorState, vm: EditorViewModel, onShare: (EditorEvent.
                     Column {
                         Box(Modifier.weight(1f).fillMaxWidth().padding(12.dp)) {
                             if (state.original == null) {
-                                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                                AsciiArt(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    accent = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    style = GlitchStyle.Scan,
+                                    faceOnly = true,
+                                    modifier = Modifier.align(Alignment.Center).width(150.dp),
+                                )
                             } else {
                                 PhotoView(
                                     state = state,
@@ -219,14 +231,18 @@ private fun ExportBar(state: EditorState, onSave: () -> Unit, onShare: () -> Uni
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val enabled = state.original != null && !state.exporting && !state.detecting
-            Button(onClick = onSave, enabled = enabled, modifier = Modifier.weight(1f).height(52.dp)) {
-                if (state.exporting) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
+            Box(Modifier.weight(1f).height(52.dp)) {
+                Button(onClick = onSave, enabled = enabled, modifier = Modifier.fillMaxSize()) {
                     Icon(Icons.Outlined.Download, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.save), style = MaterialTheme.typography.titleMedium)
                 }
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.save), style = MaterialTheme.typography.titleMedium)
+                // Saving "flushes" the button: glitch blocks sweep across it, then burst when done
+                GlitchSweep(
+                    active = state.exporting,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.matchParentSize().clip(ButtonDefaults.shape),
+                )
             }
             FilledTonalButton(onClick = onShare, enabled = enabled, modifier = Modifier.weight(1f).height(52.dp)) {
                 Icon(Icons.Outlined.Share, null, Modifier.size(20.dp))
@@ -234,6 +250,16 @@ private fun ExportBar(state: EditorState, onSave: () -> Unit, onShare: () -> Uni
                 Text(stringResource(R.string.share), style = MaterialTheme.typography.titleMedium)
             }
         }
+    }
+}
+
+@Composable
+private fun ModeSwitch(mode: EditorMode, onSwitch: (EditorMode) -> Unit) {
+    val toInvisible = mode == EditorMode.VISIBLE
+    TextButton(onClick = { onSwitch(if (toInvisible) EditorMode.INVISIBLE else EditorMode.VISIBLE) }) {
+        Icon(if (toInvisible) Icons.Outlined.Shield else Icons.Outlined.GridOn, stringResource(R.string.switch_mode), Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(stringResource(if (toInvisible) R.string.switch_to_invisible else R.string.switch_to_visible))
     }
 }
 
@@ -279,22 +305,28 @@ private fun SectionHeader(text: Int, modifier: Modifier = Modifier) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun Controls(state: EditorState, vm: EditorViewModel, modifier: Modifier = Modifier) {
+    val invisible = state.mode == EditorMode.INVISIBLE
     Column(modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Column {
-            SectionHeader(R.string.technique)
-            TechniqueRow(state.technique, vm::selectTechnique)
-            Text(
-                stringResource(state.technique.description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 10.dp),
-            )
+        if (invisible) {
+            InvisibleHeader(state.technique)
+        } else {
+            Column {
+                SectionHeader(R.string.technique)
+                TechniqueRow(state.technique, vm::selectTechnique)
+                Text(
+                    stringResource(state.technique.description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
         }
 
         Column {
             SectionHeader(R.string.apply_to)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RegionMode.entries.forEach { mode ->
+                // The invisible cloak only shows the modes it supports
+                RegionMode.entries.filter { !invisible || it in state.technique.regionModes }.forEach { mode ->
                     FilterChip(
                         selected = state.regionMode == mode,
                         onClick = { vm.selectRegionMode(mode) },
@@ -317,12 +349,14 @@ private fun Controls(state: EditorState, vm: EditorViewModel, modifier: Modifier
                     ) { Text(stringResource(strength.label)) }
                 }
             }
+            if (invisible) LiveStat(state.params)
         }
 
         MoreSettings(state, vm)
 
         if (state.technique == Technique.INVISIBLE) {
             MaxPrivacyCard(state, onStart = vm::startMax, onCancel = vm::cancelMax)
+            FunExtras(state, vm)
         }
     }
 
@@ -354,7 +388,7 @@ private const val KEY_INFO_SEEN = "invisible_info_seen"
 private fun TechniqueRow(selected: Technique, onSelect: (Technique) -> Unit) {
     val colors = MaterialTheme.colorScheme
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(end = 16.dp)) {
-        items(Technique.entries) { technique ->
+        items(Technique.visible) { technique ->
             val isSelected = technique == selected
             Surface(
                 onClick = { onSelect(technique) },
@@ -364,17 +398,29 @@ private fun TechniqueRow(selected: Technique, onSelect: (Technique) -> Unit) {
                 modifier = Modifier.width(104.dp),
             ) {
                 Column(Modifier.padding(12.dp)) {
+                    // The portrait from the home screen, hidden the way this technique hides faces.
+                    // Only the selected one moves, and picking it plays a short glitch burst
                     Box(
                         Modifier
-                            .size(40.dp)
+                            .fillMaxWidth()
+                            .height(56.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) colors.secondary else colors.surfaceContainerHighest),
+                            .background(if (isSelected) colors.secondary.copy(alpha = 0.25f) else colors.surfaceContainerHighest),
                         contentAlignment = Alignment.Center,
                     ) {
+                        AsciiArt(
+                            color = (if (isSelected) colors.onSecondaryContainer else colors.onSurface).copy(alpha = 0.35f),
+                            accent = if (isSelected) colors.secondary else colors.primary.copy(alpha = 0.8f),
+                            style = GlitchStyle.Hidden(technique),
+                            faceOnly = true,
+                            animate = isSelected,
+                            burstKey = if (isSelected) technique else null,
+                            modifier = Modifier.height(56.dp),
+                        )
                         Icon(
                             technique.icon, null,
-                            tint = if (isSelected) colors.onSecondary else colors.primary,
-                            modifier = Modifier.size(22.dp),
+                            tint = if (isSelected) colors.secondary else colors.primary,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(16.dp),
                         )
                     }
                     Text(
@@ -393,8 +439,93 @@ private fun TechniqueRow(selected: Technique, onSelect: (Technique) -> Unit) {
 
 @Composable
 private fun MoreSettings(state: EditorState, vm: EditorViewModel) {
+    ExpandableCard(Icons.Outlined.Tune, R.string.more_settings) {
+        state.technique.params
+            .filter { !it.extra }
+            .filter { it.key != Params.SHAPE || state.regionMode != RegionMode.WHOLE_IMAGE }
+            .forEach { spec ->
+                ParamControl(spec, state.params[spec.key] ?: spec.min) { vm.setParam(spec.key, it) }
+            }
+    }
+}
+
+/** Settings that only change the look (rainbow style, face shape), each with its honest warning. */
+@Composable
+private fun FunExtras(state: EditorState, vm: EditorViewModel) {
+    val extras = state.technique.params.filter { it.extra }
+    if (extras.isEmpty()) return
+    ExpandableCard(Icons.Outlined.AutoAwesome, R.string.fun_extras, R.string.fun_extras_body) {
+        extras.forEach { spec ->
+            val value = state.params[spec.key] ?: spec.min
+            Column {
+                ParamControl(spec, value) { vm.setParam(spec.key, it) }
+                val warning = when (spec.key) {
+                    Params.RAINBOW -> R.string.rainbow_warning.takeIf { value >= 1f }
+                    Params.MORPH -> R.string.morph_warning
+                    else -> null
+                }
+                if (warning != null) {
+                    Text(
+                        stringResource(warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** What the lab measured at the current strength, as a strip of squares and one line of text. */
+@Composable
+private fun LiveStat(params: Map<String, Float>) {
+    val rainbow = (params[Params.RAINBOW] ?: 0f) >= 1f
+    val count = LabStats.recognised(params[Params.VISIBILITY] ?: 0f, rainbow)
+    Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        StatStrip(count, Modifier.fillMaxWidth(), rainbow)
+        Text(
+            stringResource(R.string.stat_line, count),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Title card of the invisible half of the editor, with the glitching portrait as its picture. */
+@Composable
+private fun InvisibleHeader(technique: Technique) {
     val colors = MaterialTheme.colorScheme
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainer) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)).background(colors.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                AsciiArt(
+                    color = colors.onSurface.copy(alpha = 0.35f),
+                    accent = colors.primary.copy(alpha = 0.8f),
+                    faceOnly = true,
+                    modifier = Modifier.height(72.dp),
+                )
+            }
+            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Text(stringResource(technique.title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(technique.description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpandableCard(icon: ImageVector, title: Int, subtitle: Int? = null, content: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    var expanded by rememberSaveable(title) { mutableStateOf(false) }
     val arrow by animateFloatAsState(if (expanded) 180f else 0f, label = "arrow")
     Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainer) {
         Column {
@@ -407,13 +538,14 @@ private fun MoreSettings(state: EditorState, vm: EditorViewModel) {
                             .background(colors.surfaceContainerHighest),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Outlined.Tune, null, tint = colors.primary, modifier = Modifier.size(22.dp))
+                        Icon(icon, null, tint = colors.primary, modifier = Modifier.size(22.dp))
                     }
-                    Text(
-                        stringResource(R.string.more_settings),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f).padding(start = 14.dp),
-                    )
+                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text(stringResource(title), style = MaterialTheme.typography.titleMedium)
+                        if (subtitle != null) {
+                            Text(stringResource(subtitle), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                        }
+                    }
                     Icon(Icons.Outlined.ExpandMore, null, Modifier.rotate(arrow), tint = colors.onSurfaceVariant)
                 }
             }
@@ -421,13 +553,7 @@ private fun MoreSettings(state: EditorState, vm: EditorViewModel) {
                 Column(
                     Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    state.technique.params
-                        .filter { it.key != Params.SHAPE || state.regionMode != RegionMode.WHOLE_IMAGE }
-                        .forEach { spec ->
-                            ParamControl(spec, state.params[spec.key] ?: spec.min) { vm.setParam(spec.key, it) }
-                        }
-                }
+                ) { content() }
             }
         }
     }
@@ -444,12 +570,18 @@ private fun RegionHint(state: EditorState) {
         state.regionMode == RegionMode.MANUAL -> stringResource(R.string.hint_manual)
         else -> stringResource(R.string.hint_whole)
     }
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp),
-    )
+    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (state.detecting) {
+            AsciiArt(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                accent = MaterialTheme.colorScheme.primary,
+                style = GlitchStyle.Scan,
+                faceOnly = true,
+                modifier = Modifier.height(28.dp).padding(end = 8.dp),
+            )
+        }
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

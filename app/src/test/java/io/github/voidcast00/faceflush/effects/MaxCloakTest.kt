@@ -47,6 +47,18 @@ class MaxCloakTest {
     }
 
     @Test
+    fun rainbowStyleMovesEachChannelOnItsOwn() {
+        val n = CanonicalFace.SIZE
+        val target = FloatArray(n * n * 3) { if (it % 3 == 0) 0.8f else -0.5f }
+        val field = MaxCloak(FakeModel(target)).optimise(
+            image(), lm, 8f / 255f, steps = 40, start = null, seed = 1, brightnessOnly = false,
+        )
+        assertEquals(0.8f, field.sample(0, 50.0, 50.0), 0.26f)
+        assertEquals(-0.5f, field.sample(1, 50.0, 50.0), 0.26f)
+        assertEquals(-0.5f, field.sample(2, 50.0, 50.0), 0.26f)
+    }
+
+    @Test
     fun warmStartUsesTheQuickCloaksBrightness() {
         val n = CanonicalFace.SIZE
         val start = CanonicalField(3, n, FloatArray(3 * n * n) { if (it < n * n) 0.9f else 0f }) // red only

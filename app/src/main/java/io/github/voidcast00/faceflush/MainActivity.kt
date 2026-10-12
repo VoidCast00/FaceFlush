@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.voidcast00.faceflush.effects.EditorMode
 import io.github.voidcast00.faceflush.ui.EditorScreen
 import io.github.voidcast00.faceflush.ui.HomeScreen
 import io.github.voidcast00.faceflush.ui.theme.FaceFlushTheme
@@ -46,7 +47,10 @@ private fun FaceFlushApp(onShare: (EditorEvent.Share) -> Unit, vm: EditorViewMod
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(vm::open)
     }
-    val pick = { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    val pick = { mode: EditorMode ->
+        vm.setMode(mode)
+        pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
 
     if (state.hasImage) {
         BackHandler(onBack = vm::close)

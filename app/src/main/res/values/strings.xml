@@ -8,7 +8,10 @@
     <string name="badge_offline">Offline</string>
     <string name="badge_no_metadata">No metadata</string>
     <string name="badge_on_device">On-device</string>
-    <string name="pick_photo">Choose a photo</string>
+    <string name="mode_visible_title">Hide faces visibly</string>
+    <string name="mode_visible_body">Pixelate, blur, mask… obvious, and the most reliable.</string>
+    <string name="mode_invisible_title">Protect invisibly</string>
+    <string name="mode_invisible_body">Tiny brightness changes that confuse face recognition AI.</string>
     <string name="home_privacy">Everything happens on your phone. FaceFlush has no internet access, and the photos it saves contain no location or camera data.</string>
 
     <!-- Editor -->
@@ -18,6 +21,14 @@
     <string name="apply_to">Apply to</string>
     <string name="strength">Strength</string>
     <string name="more_settings">More settings</string>
+    <string name="switch_to_invisible">Invisible</string>
+    <string name="switch_to_visible">Visible</string>
+    <string name="switch_mode">Switch mode</string>
+    <string name="fun_extras">Fun extras</string>
+    <string name="fun_extras_body">For the look only. They don\'t add protection.</string>
+    <string name="rainbow_warning">Rainbow looks cool but protects less after upload: at strength 16 a strong AI still recognised about 39 in 100 faces, against 14 in 100 with brightness only.</string>
+    <string name="morph_warning">Barely works: a strong AI still recognised 97 in 100 faces, while the face visibly changes.</string>
+    <string name="stat_line">With Max privacy, a strong AI it never saw still recognised about %1$d in 100 faces.</string>
     <string name="save">Save</string>
     <string name="share">Share</string>
     <string name="share_title">Share photo</string>
@@ -85,7 +96,8 @@
     <string name="param_opacity">Opacity</string>
     <string name="param_style">Bar pattern</string>
     <string name="param_visibility">Cloak strength (higher is more visible)</string>
-    <string name="param_morph">Face shape change (barely works, see below)</string>
+    <string name="param_morph">Face shape change</string>
+    <string name="param_rainbow">Rainbow style</string>
 
     <!-- Options -->
     <string name="option_oval">Oval</string>
@@ -114,6 +126,7 @@
         <item quantity="other">Applied to %1$d faces at cloak strength %2$d. Run again after changing the strength.</item>
     </plurals>
     <string name="max_again">Run again</string>
+    <string name="max_style_changed">The style changed since the last run. Run Max privacy again to apply it.</string>
     <string name="max_no_faces">Max privacy needs at least one detected face.</string>
     <string name="max_failed">Max privacy stopped before it finished.</string>
     <string name="max_channel">Max privacy</string>
@@ -128,9 +141,16 @@
     <string name="info_what_title">What it does</string>
     <string name="info_what">Recognition AI turns a face into a list of numbers and compares those lists. FaceFlush makes tiny, trained brightness changes to the face (and optionally a small change in face shape) that push your numbers away from you. At low strength people barely see a difference; at the default strength the face looks slightly smudged.</string>
     <string name="info_tests_title">What our tests showed</string>
-    <string name="info_tests">Measured on 150 test faces, also after Instagram-style recompression. Max privacy is tuned on one AI; we also test a stronger AI it never saw, as a stand-in for unknown services:\n• Quick cloak alone: the strong AI still recognised 99 in 100.\n• Max privacy, strength 8 (barely visible): the tuned AI recognised fewer than 3 in 100, but the strong AI still recognised about 87 in 100.\n• Max privacy, strength 16 (default, visible smudges): the strong AI recognised about 14 to 24 in 100.\n• Max privacy, strength 24 (clearly visible): the strong AI recognised about 3 to 5 in 100.\nThis only covers the AI and photo changes we tested.</string>
-    <string name="info_morph_title">Face shape change: practically useless</string>
-    <string name="info_morph">The face shape slider in More settings is off by default. In our tests it visibly changed faces while a strong AI still recognised 97 in 100 (88 in 100 at the maximum). It is kept only for people who want to experiment.</string>
+    <string name="stats_lit">= still recognised by a strong AI that Max privacy never saw</string>
+    <string name="stats_brightness">Brightness</string>
+    <string name="stats_rainbow">Rainbow</string>
+    <string name="stats_strength">Strength %1$d</string>
+    <string name="stats_of_100">/100</string>
+    <string name="stats_quick">Quick cloak alone</string>
+    <string name="stats_footnote">Max privacy, 150 test faces, after Instagram-style compression. The AI it is tuned on recognised fewer than 3 in 100 at every strength. These numbers only cover the AI and photo changes we tested.</string>
+    <string name="stats_picture">A public-domain painting at this strength</string>
+    <string name="info_morph_title">Fun extras: for the look only</string>
+    <string name="info_morph">Rainbow style is the older colour version of the cloak. It looks cool, but compression on upload removes much of it (see the Rainbow numbers above). Face shape change visibly changes the face while a strong AI still recognised 97 in 100. Both are off by default.</string>
     <string name="info_race_title">It is an arms race</string>
     <string name="info_race">A similar tool (Fawkes, 2020) stopped working once newer AI came out. Assume any invisible protection will be beaten eventually, and that big companies use AI we cannot test against.</string>
     <string name="info_cost_title">The cost</string>

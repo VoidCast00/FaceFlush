@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.voidcast00.faceflush.EditorState
 import io.github.voidcast00.faceflush.R
+import io.github.voidcast00.faceflush.effects.Params
 import io.github.voidcast00.faceflush.max.MaxPrivacyWorker
 import kotlin.math.roundToInt
 
@@ -91,20 +92,38 @@ fun MaxPrivacyCard(state: EditorState, onStart: () -> Unit, onCancel: () -> Unit
                 color = colors.onSurfaceVariant,
             )
             val max = state.max
+            val rainbow = (state.params[Params.RAINBOW] ?: 0f) >= 1f
             when {
                 max.running -> {
                     val percent = max.percent
-                    if (percent == null) {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                        Text(stringResource(R.string.max_starting), style = MaterialTheme.typography.labelLarge)
-                    } else {
-                        LinearProgressIndicator({ percent / 100f }, Modifier.fillMaxWidth())
-                        Text(
-                            stringResource(R.string.max_running, percent, ((max.secondsLeft ?: 0) + 59) / 60),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                    // The glitch spreads over the portrait as the job goes: at 100% the face is "flushed"
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(84.dp).clip(RoundedCornerShape(14.dp)).background(colors.surfaceContainerHighest),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            AsciiArt(
+                                color = colors.onSurface.copy(alpha = 0.35f),
+                                accent = colors.primary.copy(alpha = 0.85f),
+                                style = GlitchStyle.Progress((percent ?: 0) / 100f, rainbow),
+                                faceOnly = true,
+                                modifier = Modifier.height(84.dp),
+                            )
+                        }
+                        Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (percent == null) {
+                                Text(stringResource(R.string.max_starting), style = MaterialTheme.typography.labelLarge)
+                                LinearProgressIndicator(Modifier.fillMaxWidth())
+                            } else {
+                                Text(
+                                    stringResource(R.string.max_running, percent, ((max.secondsLeft ?: 0) + 59) / 60),
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                LinearProgressIndicator({ percent / 100f }, Modifier.fillMaxWidth())
+                            }
+                            OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+                        }
                     }
-                    OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
                 }
                 state.maxApplied > 0 -> {
                     val eps = state.faces.firstNotNullOfOrNull { it.pattern }?.eps ?: 0f
@@ -116,6 +135,13 @@ fun MaxPrivacyCard(state: EditorState, onStart: () -> Unit, onCancel: () -> Unit
                                 R.plurals.max_applied, state.maxApplied, state.maxApplied, (eps * 255).roundToInt(),
                             ),
                             style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    if (state.faces.any { it.pattern != null && it.pattern.rainbow != rainbow }) {
+                        Text(
+                            stringResource(R.string.max_style_changed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.tertiary,
                         )
                     }
                     OutlinedButton(onClick = { sheet = InfoMode.START }, enabled = faces > 0) {
@@ -174,13 +200,22 @@ fun InvisibleInfoSheet(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                stringResource(R.string.info_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsciiArt(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    accent = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    faceOnly = true,
+                    modifier = Modifier.height(64.dp).padding(end = 14.dp),
+                )
+                Text(
+                    stringResource(R.string.info_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
+                )
+            }
             InfoSection(R.string.info_what_title, stringResource(R.string.info_what))
-            InfoSection(R.string.info_tests_title, stringResource(R.string.info_tests))
+            Text(stringResource(R.string.info_tests_title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            StrengthStats(Modifier.fillMaxWidth())
             InfoSection(R.string.info_morph_title, stringResource(R.string.info_morph))
             InfoSection(R.string.info_race_title, stringResource(R.string.info_race))
             InfoSection(R.string.info_cost_title, stringResource(R.string.info_cost, minutesPerFace))

@@ -431,3 +431,22 @@ mid-tone allowance, and fade the pattern out over the background next to the fac
 - **Strengths:** Light 8, Medium 16 (the default), Strong 24; the slider now goes up to 24.
 - The in-app explanation now gives the new numbers (strong AI never seen: about 87 in 100 at 8,
   14 to 24 at 16, 3 to 5 at 24), and says that the default leaves visible smudges.
+
+## 2026-10-12: Visible and invisible become two halves of the app
+
+The start screen now asks what you want before you pick a photo: **Hide faces visibly** (Pixelate,
+Blur, Mask, Dead pixels, Feature bars) or **Protect invisibly** (the cloak and Max privacy). The
+editor shows only what belongs to that half, and a button in the top bar switches between them
+without picking the photo again.
+
+- **Fun extras.** Rainbow style (the old colour cloak) and the face shape change moved into their
+  own card, "For the look only. They don't add protection", each with its measured warning.
+  Rainbow works for the quick cloak and for Max privacy.
+- **Numbers as pictures.** The explainer now shows Light / Medium / Strong side by side: the test
+  painting at that strength, a 10 × 10 grid with one lit square per recognised face, and the
+  number, switchable between brightness and rainbow. Under the strength buttons a strip of 20
+  squares shows the measured result for the current strength.
+- **The glitch portrait** from the start screen now also hides itself in each technique's style on
+  the technique cards, scans while faces are being found, fills up with glitch as Max privacy
+  progresses (fully "flushed" at 100%), heads the explainer and the invisible half, and sweeps
+  across the Save button while saving.

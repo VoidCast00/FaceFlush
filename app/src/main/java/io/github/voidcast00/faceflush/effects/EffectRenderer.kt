@@ -69,7 +69,7 @@ object EffectRenderer {
                     if (own != null) {
                         cloak(buf, lm, own.field, own.eps)
                     } else {
-                        invisible?.cloak?.let { cloak(buf, lm, it, p(Params.VISIBILITY) / 255f) }
+                        invisible?.cloakFor(p(Params.RAINBOW) >= 1f)?.let { cloak(buf, lm, it, p(Params.VISIBILITY) / 255f) }
                     }
                 }
             }

@@ -17,7 +17,8 @@ enum class Strength(@StringRes val label: Int) {
 
 /**
  * One adjustable setting. With [options] set it is a choice (value = option index) shown as
- * buttons; otherwise it is a slider from [min] to [max].
+ * buttons; otherwise it is a slider from [min] to [max]. [extra] settings change the look but add
+ * no protection, so the editor keeps them apart under "Fun extras".
  */
 data class ParamSpec(
     val key: String,
@@ -26,6 +27,7 @@ data class ParamSpec(
     val max: Float = 1f,
     val step: Float = 1f,
     val options: List<Int>? = null,
+    val extra: Boolean = false,
 )
 
 object Params {
@@ -45,6 +47,7 @@ object Params {
     const val STYLE = "style"
     const val VISIBILITY = "visibility"
     const val MORPH = "morph"
+    const val RAINBOW = "rainbow"
 }
 
 private val coverageSpec = ParamSpec(Params.COVERAGE, R.string.param_coverage, 1f, 1.8f, 0.05f)
@@ -165,9 +168,14 @@ enum class Technique(
             ParamSpec(Params.VISIBILITY, R.string.param_visibility, 0f, 24f),
             // Kept for those who want it, but off by default: the lab found it barely works
             // (strong AI still matched 97% at 1.0) while visibly changing the face
-            ParamSpec(Params.MORPH, R.string.param_morph, 0f, 1.5f, 0.1f),
+            ParamSpec(Params.MORPH, R.string.param_morph, 0f, 1.5f, 0.1f, extra = true),
+            // The old colour cloak: looks cool, but protects less after upload than brightness only
+            ParamSpec(
+                Params.RAINBOW, R.string.param_rainbow,
+                options = listOf(R.string.option_off, R.string.option_on), extra = true,
+            ),
         ),
-        defaults = mapOf(Params.MORPH to 0f),
+        defaults = mapOf(Params.MORPH to 0f, Params.RAINBOW to 0f),
         // All three are strengths measured in the lab (see docs/DIARY.md). Medium is the default:
         // from 16 up Max privacy also fools a strong AI it never saw, at the cost of visible smudges
         presets = mapOf(
@@ -177,11 +185,19 @@ enum class Technique(
         ),
     );
 
-    /** Full parameter set for [strength], keeping any choices already made in [current]. */
+    /** Full parameter set for [strength], keeping any choices and extras already made in [current]. */
     fun paramsFor(strength: Strength, current: Map<String, Float> = emptyMap()): Map<String, Float> {
-        val choices = params.filter { it.options != null }.mapNotNull { spec ->
+        val kept = params.filter { it.options != null || it.extra }.mapNotNull { spec ->
             current[spec.key]?.let { spec.key to it }
         }
-        return defaults + choices + presets.getValue(strength)
+        return defaults + kept + presets.getValue(strength)
+    }
+
+    companion object {
+        /** The techniques that hide faces visibly (everything but the invisible cloak). */
+        val visible = entries.filter { it != INVISIBLE }
     }
 }
+
+/** The two halves of the app, chosen on the home screen. */
+enum class EditorMode { VISIBLE, INVISIBLE }

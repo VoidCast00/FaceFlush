@@ -44,9 +44,10 @@ data class CloakTransform(val angle: Float, val scale: Float, val shiftX: Float,
  * Optimises a cloak pattern for one face (signed-gradient descent with random transforms, as in
  * lab/sim_max.py), then returns it as a canonical field that [cloak] pastes into the photo.
  *
- * The pattern only changes brightness: red, green and blue always move together (lab: --chroma 0).
- * In the lab this beat a free colour pattern from strength 16 up, held up better after social-media
- * compression, and has no rainbow shimmer (docs/DIARY.md, 2026-10-12).
+ * By default the pattern only changes brightness: red, green and blue always move together (lab:
+ * --chroma 0). In the lab this beat a free colour pattern from strength 16 up, held up better after
+ * social-media compression, and has no rainbow shimmer (docs/DIARY.md, 2026-10-12). With
+ * [brightnessOnly] false each channel moves on its own: the "rainbow style" fun extra.
  */
 class MaxCloak(private val model: CloakModel) {
 
@@ -58,6 +59,7 @@ class MaxCloak(private val model: CloakModel) {
         start: CanonicalField?,
         seed: Long,
         eot: Int = 1,
+        brightnessOnly: Boolean = true,
         onStep: (Int) -> Unit = {},
         isCancelled: () -> Boolean = { false },
     ): CanonicalField {
@@ -66,10 +68,11 @@ class MaxCloak(private val model: CloakModel) {
         val weight = cropWeight(crop)
         val pattern = FloatArray(n * n * 3)
         if (start != null) {
-            // The quick cloak's brightness part, i.e. the average of its three channels
             for (y in 0 until n) for (x in 0 until n) {
-                val v = (0 until 3).sumOf { start.sample(it, x.toDouble(), y.toDouble()).toDouble() } / 3
-                for (c in 0 until 3) pattern[(y * n + x) * 3 + c] = v.toFloat()
+                val rgb = FloatArray(3) { start.sample(it, x.toDouble(), y.toDouble()) }
+                // Brightness only starts from the quick cloak's brightness part (the channel average)
+                val mean = rgb.average().toFloat()
+                for (c in 0 until 3) pattern[(y * n + x) * 3 + c] = if (brightnessOnly) mean else rgb[c]
             }
         }
         val refs = model.step(crop, pattern, weight, 0f, model.embeddingSizes.map { FloatArray(it) }, CloakTransform.IDENTITY)
@@ -86,13 +89,17 @@ class MaxCloak(private val model: CloakModel) {
                 for (j in grad.indices) grad[j] += g[j]
             }
             if (isCancelled()) break
-            // One brightness value per pixel: its gradient is the sum over red, green and blue
-            for (p in 0 until n * n) {
-                val j = p * 3
-                val v = (pattern[j] - stepSize * sign(grad[j] + grad[j + 1] + grad[j + 2])).coerceIn(-1f, 1f)
-                pattern[j] = v
-                pattern[j + 1] = v
-                pattern[j + 2] = v
+            if (brightnessOnly) {
+                // One brightness value per pixel: its gradient is the sum over red, green and blue
+                for (p in 0 until n * n) {
+                    val j = p * 3
+                    val v = (pattern[j] - stepSize * sign(grad[j] + grad[j + 1] + grad[j + 2])).coerceIn(-1f, 1f)
+                    pattern[j] = v
+                    pattern[j + 1] = v
+                    pattern[j + 2] = v
+                }
+            } else {
+                for (j in pattern.indices) pattern[j] = (pattern[j] - stepSize * sign(grad[j])).coerceIn(-1f, 1f)
             }
             onStep(i + 1)
         }

@@ -44,6 +44,7 @@ class MaxPrivacyWorker(context: Context, params: WorkerParameters) : CoroutineWo
         val lms = inputData.getFloatArray(KEY_LANDMARKS) ?: return Result.failure()
         val eps = inputData.getFloat(KEY_EPS, 16f / 255f)
         val seed = inputData.getLong(KEY_SEED, 0L)
+        val rainbow = inputData.getBoolean(KEY_RAINBOW, false)
         val faceCount = lms.size / 10
         val total = faceCount * STEPS
         createChannel(applicationContext)
@@ -66,7 +67,7 @@ class MaxPrivacyWorker(context: Context, params: WorkerParameters) : CoroutineWo
                         Pt(lms[o + 6], lms[o + 7]), Pt(lms[o + 8], lms[o + 9]),
                     )
                     val field = MaxCloak(model).optimise(
-                        buf, lm, eps, STEPS, start, seed + f, eot = EOT,
+                        buf, lm, eps, STEPS, start, seed + f, eot = EOT, brightnessOnly = !rainbow,
                         onStep = { step ->
                             val done = f * STEPS + step
                             val now = System.nanoTime()
@@ -89,7 +90,7 @@ class MaxPrivacyWorker(context: Context, params: WorkerParameters) : CoroutineWo
         }
         if (!ok) return Result.failure()
         notifyDone()
-        return Result.success(workDataOf(KEY_FACES to faceCount, KEY_EPS to eps))
+        return Result.success(workDataOf(KEY_FACES to faceCount, KEY_EPS to eps, KEY_RAINBOW to rainbow))
     }
 
     private fun foregroundInfo(percent: Int, secondsLeft: Int?): ForegroundInfo {
@@ -139,6 +140,7 @@ class MaxPrivacyWorker(context: Context, params: WorkerParameters) : CoroutineWo
         const val KEY_LANDMARKS = "landmarks"
         const val KEY_EPS = "eps"
         const val KEY_SEED = "seed"
+        const val KEY_RAINBOW = "rainbow"
         const val KEY_FACES = "faces"
         const val KEY_PROGRESS = "progress"
         const val KEY_SECONDS_LEFT = "seconds_left"
@@ -156,11 +158,11 @@ class MaxPrivacyWorker(context: Context, params: WorkerParameters) : CoroutineWo
 
         fun estimateMinutes(faces: Int) = ((faces * STEPS * EOT * SECONDS_PER_CALL) / 60).roundToInt().coerceAtLeast(1)
 
-        fun inputData(landmarks: List<Landmarks>, eps: Float, seed: Long): Data {
+        fun inputData(landmarks: List<Landmarks>, eps: Float, rainbow: Boolean, seed: Long): Data {
             val flat = landmarks.flatMap { lm ->
                 listOf(lm.eyeA, lm.eyeB, lm.nose, lm.mouthA, lm.mouthB).flatMap { listOf(it.x, it.y) }
             }
-            return workDataOf(KEY_LANDMARKS to flat.toFloatArray(), KEY_EPS to eps, KEY_SEED to seed)
+            return workDataOf(KEY_LANDMARKS to flat.toFloatArray(), KEY_EPS to eps, KEY_RAINBOW to rainbow, KEY_SEED to seed)
         }
 
         private fun dir(context: Context) = File(context.filesDir, "max").apply { mkdirs() }
